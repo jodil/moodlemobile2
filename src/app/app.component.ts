@@ -14,7 +14,6 @@
 
 import { Component, OnInit, NgZone } from '@angular/core';
 import { Platform, IonicApp } from 'ionic-angular';
-import { StatusBar } from '@ionic-native/status-bar';
 import { CoreAppProvider } from '@providers/app';
 import { CoreEventsProvider } from '@providers/events';
 import { CoreLangProvider } from '@providers/lang';
@@ -34,7 +33,7 @@ export class MoodleMobileApp implements OnInit {
     protected logger;
     protected lastUrls = {};
 
-    constructor(private platform: Platform, statusBar: StatusBar, logger: CoreLoggerProvider, keyboard: Keyboard,
+    constructor(private platform: Platform, logger: CoreLoggerProvider, keyboard: Keyboard,
             private eventsProvider: CoreEventsProvider, private loginHelper: CoreLoginHelperProvider, private zone: NgZone,
             private appProvider: CoreAppProvider, private langProvider: CoreLangProvider, private sitesProvider: CoreSitesProvider,
             private screenOrientation: ScreenOrientation, app: IonicApp) {
@@ -43,11 +42,9 @@ export class MoodleMobileApp implements OnInit {
         platform.ready().then(() => {
             // Okay, so the platform is ready and our plugins are available.
             // Here you can do any higher level native things you might need.
-            if (platform.is('android')) {
-                statusBar.styleLightContent();
-            } else {
-                statusBar.styleDefault();
-            }
+
+            // Set StatusBar properties.
+            this.appProvider.setStatusBarColor();
 
             keyboard.hideFormAccessoryBar(false);
 

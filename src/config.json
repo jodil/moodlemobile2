@@ -72,5 +72,13 @@
     "skipssoconfirmation": false,
     "forcedefaultlanguage": false,
     "privacypolicy": "https:\/\/moodle.org\/mod\/page\/view.php?id=8148",
-    "notificoncolor": "#f98012"
+    "notificoncolor": "#f98012",
+    "statusbarbg": false,
+    "statusbarlighttext": false,
+    "statusbarbgios": false,
+    "statusbarlighttextios": false,
+    "statusbarbgandroid": "#df7310",
+    "statusbarlighttextandroid": true,
+    "statusbarbgremotetheme": "#000000",
+    "statusbarlighttextremotetheme": true
 }

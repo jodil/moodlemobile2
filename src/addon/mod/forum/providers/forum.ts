@@ -14,6 +14,7 @@
 
 import { Injectable } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { CoreSite } from '@classes/site';
 import { CoreAppProvider } from '@providers/app';
 import { CoreFilepoolProvider } from '@providers/filepool';
 import { CoreGroupsProvider } from '@providers/groups';
@@ -34,6 +35,7 @@ export class AddonModForumProvider {
     static NEW_DISCUSSION_EVENT = 'addon_mod_forum_new_discussion';
     static REPLY_DISCUSSION_EVENT = 'addon_mod_forum_reply_discussion';
     static VIEW_DISCUSSION_EVENT = 'addon_mod_forum_view_discussion';
+    static CHANGE_DISCUSSION_EVENT = 'addon_mod_forum_lock_discussion';
     static MARK_READ_EVENT = 'addon_mod_forum_mark_read';
 
     protected ROOT_CACHE_KEY = 'mmaModForum:';
@@ -758,6 +760,81 @@ export class AddonModForumProvider {
                     return response.postid;
                 }
             });
+        });
+    }
+
+    /**
+     * Lock or unlock a discussion.
+     *
+     * @param {number} forumId Forum id.
+     * @param {number} discussionId DIscussion id.
+     * @param {boolean} locked True to lock, false to unlock.
+     * @param {string} [siteId] Site ID. If not defined, current site.
+     * @return {Promise<any>} Promise resvoled when done.
+     * @since 3.7
+     */
+    setLockState(forumId: number, discussionId: number, locked: boolean, siteId?: string): Promise<any> {
+        return this.sitesProvider.getSite(siteId).then((site) => {
+            const params = {
+                forumid: forumId,
+                discussionid: discussionId,
+                targetstate: locked ? 0 : 1
+            };
+
+            return site.write('mod_forum_set_lock_state', params);
+        });
+    }
+
+    /**
+     * Returns whether the set pin state WS is available.
+     *
+     * @param  {CoreSite} [site] Site. If not defined, current site.
+     * @return {boolean} Whether it's available.
+     * @since 3.7
+     */
+    isSetPinStateAvailableForSite(site?: CoreSite): boolean {
+        site = site || this.sitesProvider.getCurrentSite();
+
+        return this.sitesProvider.wsAvailableInCurrentSite('mod_forum_set_pin_state');
+    }
+
+    /**
+     * Pin or unpin a discussion.
+     *
+     * @param {number} discussionId Discussion id.
+     * @param {boolean} locked True to pin, false to unpin.
+     * @param {string} [siteId] Site ID. If not defined, current site.
+     * @return {Promise<any>} Promise resvoled when done.
+     * @since 3.7
+     */
+    setPinState(discussionId: number, pinned: boolean, siteId?: string): Promise<any> {
+        return this.sitesProvider.getSite(siteId).then((site) => {
+            const params = {
+                discussionid: discussionId,
+                targetstate: pinned ? 1 : 0
+            };
+
+            return site.write('mod_forum_set_pin_state', params);
+        });
+    }
+
+    /**
+     * Star or unstar a discussion.
+     *
+     * @param {number} discussionId Discussion id.
+     * @param {boolean} starred True to star, false to unstar.
+     * @param {string} [siteId] Site ID. If not defined, current site.
+     * @return {Promise<any>} Promise resvoled when done.
+     * @since 3.7
+     */
+    toggleFavouriteState(discussionId: number, starred: boolean, siteId?: string): Promise<any> {
+        return this.sitesProvider.getSite(siteId).then((site) => {
+            const params = {
+                discussionid: discussionId,
+                targetstate: starred ? 1 : 0
+            };
+
+            return site.write('mod_forum_toggle_favourite_state', params);
         });
     }
 

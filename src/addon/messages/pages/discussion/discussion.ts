@@ -80,9 +80,10 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
     isGroup = false;
     members: any = {}; // Members that wrote a message, indexed by ID.
     favouriteIcon = 'fa-star';
+    favouriteIconSlash = false;
     deleteIcon = 'trash';
     blockIcon = 'close-circle';
-    addRemoveIcon = 'add';
+    addRemoveIcon = 'person';
     otherMember: any; // Other member information (individual conversations only).
     footerType: 'message' | 'blocked' | 'requiresContact' | 'requestSent' | 'requestReceived' | 'unable';
     requestContactSent = false;
@@ -244,7 +245,6 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
                                 this.title = member.fullname;
                             }
                             this.blockIcon = this.otherMember && this.otherMember.isblocked ? 'checkmark-circle' : 'close-circle';
-                            this.addRemoveIcon = this.otherMember && this.otherMember.iscontact ? 'remove' : 'add';
                         }));
                     } else {
                         this.otherMember = null;
@@ -446,7 +446,8 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
                     this.title = conversation.name;
                     this.conversationImage = conversation.imageurl;
                     this.isGroup = conversation.type == AddonMessagesProvider.MESSAGE_CONVERSATION_TYPE_GROUP;
-                    this.favouriteIcon = conversation.isfavourite ? 'fa-star-o' : 'fa-star';
+                    this.favouriteIcon = 'fa-star';
+                    this.favouriteIconSlash = conversation.isfavourite;
                     this.muteIcon = conversation.ismuted ? 'volume-up' : 'volume-off';
                     if (!this.isGroup) {
                         this.userId = conversation.userid;
@@ -809,11 +810,25 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
      * @param {number} index Index where the message is to delete it from the view.
      */
     deleteMessage(message: any, index: number): void {
-        const langKey = message.pending ? 'core.areyousure' : 'addon.messages.deletemessageconfirmation';
-        this.domUtils.showConfirm(this.translate.instant(langKey)).then(() => {
+        const canDeleteAll = this.conversation && this.conversation.candeletemessagesforallusers,
+            langKey = message.pending || canDeleteAll ? 'core.areyousure' : 'addon.messages.deletemessageconfirmation',
+            options: any = {};
+
+        if (canDeleteAll && !message.pending) {
+            // Show delete for all checkbox.
+            options.inputs = [{
+                type: 'checkbox',
+                name: 'deleteforall',
+                checked: false,
+                value: true,
+                label: this.translate.instant('addon.messages.deleteforeveryone')
+            }];
+        }
+
+        this.domUtils.showConfirm(this.translate.instant(langKey), undefined, undefined, undefined, options).then((data) => {
             const modal = this.domUtils.showModalLoading('core.deleting', true);
 
-            return this.messagesProvider.deleteMessage(message).then(() => {
+            return this.messagesProvider.deleteMessage(message, data && data[0]).then(() => {
                  // Remove message from the list without having to wait for re-fetch.
                 this.messages.splice(index, 1);
                 this.removeMessage(message.hash);
@@ -1118,7 +1133,8 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
         }).catch((error) => {
             this.domUtils.showErrorModalDefault(error, 'Error changing favourite state.');
         }).finally(() => {
-            this.favouriteIcon = this.conversation.isfavourite ? 'fa-star-o' : 'fa-star';
+            this.favouriteIcon = 'fa-star';
+            this.favouriteIconSlash = this.conversation.isfavourite;
             done && done();
         });
     }
@@ -1306,7 +1322,7 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
         }).catch((error) => {
             this.domUtils.showErrorModalDefault(error, 'core.error', true);
         }).finally(() => {
-            this.addRemoveIcon = this.otherMember.iscontact ? 'remove' : 'add';
+            this.addRemoveIcon = 'person';
         });
     }
 
@@ -1381,7 +1397,7 @@ export class AddonMessagesDiscussionPage implements OnDestroy {
         }).catch((error) => {
             this.domUtils.showErrorModalDefault(error, 'core.error', true);
         }).finally(() => {
-            this.addRemoveIcon = this.otherMember.iscontact ? 'remove' : 'add';
+            this.addRemoveIcon = 'person';
         });
     }
 
