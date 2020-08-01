@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ import { CoreCronDelegate } from '@providers/cron';
 import { CoreCourseModuleDelegate } from '@core/course/providers/module-delegate';
 import { CoreCourseModulePrefetchDelegate } from '@core/course/providers/module-prefetch-delegate';
 import { CoreContentLinksDelegate } from '@core/contentlinks/providers/delegate';
+import { CoreTagAreaDelegate } from '@core/tag/providers/area-delegate';
 import { AddonModWikiComponentsModule } from './components/components.module';
 import { AddonModWikiProvider } from './providers/wiki';
 import { AddonModWikiOfflineProvider } from './providers/wiki-offline';
@@ -29,7 +30,7 @@ import { AddonModWikiPageOrMapLinkHandler } from './providers/page-or-map-link-h
 import { AddonModWikiCreateLinkHandler } from './providers/create-link-handler';
 import { AddonModWikiEditLinkHandler } from './providers/edit-link-handler';
 import { AddonModWikiListLinkHandler } from './providers/list-link-handler';
-import { CoreUpdateManagerProvider } from '@providers/update-manager';
+import { AddonModWikiTagAreaHandler } from './providers/tag-area-handler';
 
 // List of providers (without handlers).
 export const ADDON_MOD_WIKI_PROVIDERS: any[] = [
@@ -55,7 +56,8 @@ export const ADDON_MOD_WIKI_PROVIDERS: any[] = [
         AddonModWikiPageOrMapLinkHandler,
         AddonModWikiCreateLinkHandler,
         AddonModWikiEditLinkHandler,
-        AddonModWikiListLinkHandler
+        AddonModWikiListLinkHandler,
+        AddonModWikiTagAreaHandler
     ]
 })
 export class AddonModWikiModule {
@@ -64,7 +66,8 @@ export class AddonModWikiModule {
             cronDelegate: CoreCronDelegate, syncHandler: AddonModWikiSyncCronHandler, linksDelegate: CoreContentLinksDelegate,
             indexHandler: AddonModWikiIndexLinkHandler, pageOrMapHandler: AddonModWikiPageOrMapLinkHandler,
             createHandler: AddonModWikiCreateLinkHandler, editHandler: AddonModWikiEditLinkHandler,
-            updateManager: CoreUpdateManagerProvider, listLinkHandler: AddonModWikiListLinkHandler) {
+            listLinkHandler: AddonModWikiListLinkHandler,
+            tagAreaDelegate: CoreTagAreaDelegate, tagAreaHandler: AddonModWikiTagAreaHandler) {
 
         moduleDelegate.registerHandler(moduleHandler);
         prefetchDelegate.registerHandler(prefetchHandler);
@@ -74,21 +77,6 @@ export class AddonModWikiModule {
         linksDelegate.registerHandler(createHandler);
         linksDelegate.registerHandler(editHandler);
         linksDelegate.registerHandler(listLinkHandler);
-
-        // Allow migrating the tables from the old app to the new schema.
-        updateManager.registerSiteTableMigration({
-            name: 'mma_mod_wiki_new_pages_store',
-            newName: AddonModWikiOfflineProvider.NEW_PAGES_TABLE,
-            fields: [
-                {
-                    name: 'subwikiWikiUserGroup',
-                    delete: true
-                },
-                {
-                    name: 'caneditpage',
-                    type: 'boolean'
-                }
-            ]
-        });
+        tagAreaDelegate.registerHandler(tagAreaHandler);
     }
 }

@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import { AddonModDataFieldPluginComponent } from './field-plugin/field-plugin';
 import { AddonModDataActionComponent } from './action/action';
 import { CoreCompileHtmlComponentModule } from '@core/compile/components/compile-html/compile-html.module';
 import { CoreCommentsComponentsModule } from '@core/comments/components/components.module';
+import { CoreTagComponentsModule } from '@core/tag/components/components.module';
 
 @NgModule({
     declarations: [
@@ -41,7 +42,8 @@ import { CoreCommentsComponentsModule } from '@core/comments/components/componen
         CorePipesModule,
         CoreCourseComponentsModule,
         CoreCompileHtmlComponentModule,
-        CoreCommentsComponentsModule
+        CoreCommentsComponentsModule,
+        CoreTagComponentsModule
     ],
     providers: [
     ],

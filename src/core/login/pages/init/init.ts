@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,7 +43,7 @@ export class CoreLoginInitPage {
         this.initDelegate.ready().then(() => {
             // Check if there was a pending redirect.
             const redirectData = this.appProvider.getRedirect();
-            if (redirectData.siteId && redirectData.page) {
+            if (redirectData.siteId) {
                 // Unset redirect data.
                 this.appProvider.storeRedirect('', '', '');
 
@@ -63,8 +63,8 @@ export class CoreLoginInitPage {
                             return this.loadPage();
                         });
                     } else {
-                        // No site to load, just open the state.
-                        return this.navCtrl.setRoot(redirectData.page, redirectData.params, { animate: false });
+                        // No site to load, open the page.
+                        return this.loginHelper.goToNoSitePage(this.navCtrl, redirectData.page, redirectData.params);
                     }
                 }
             }
@@ -81,27 +81,19 @@ export class CoreLoginInitPage {
     /**
      * Load the right page.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected loadPage(): Promise<any> {
         if (this.sitesProvider.isLoggedIn()) {
-            if (!this.loginHelper.isSiteLoggedOut()) {
-                // User is logged in, go to site initial page.
-                return this.loginHelper.goToSiteInitialPage();
-            } else {
-                // The site is marked as logged out. Logout and try again.
+            if (this.loginHelper.isSiteLoggedOut()) {
                 return this.sitesProvider.logout().then(() => {
                     return this.loadPage();
                 });
             }
-        } else {
-            return this.sitesProvider.hasSites().then((hasSites) => {
-                if (hasSites) {
-                    return this.navCtrl.setRoot('CoreLoginSitesPage');
-                } else {
-                    return this.loginHelper.goToAddSite(true);
-                }
-            });
+
+            return this.loginHelper.goToSiteInitialPage();
         }
+
+        return this.navCtrl.setRoot('CoreLoginSitesPage');
     }
 }

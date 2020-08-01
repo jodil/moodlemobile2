@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import { CoreComponentsModule } from '@components/components.module';
 import { CoreDirectivesModule } from '@directives/directives.module';
 import { CoreCourseComponentsModule } from '@core/course/components/components.module';
 import { AddonModBookIndexComponent } from './index/index';
+import { CoreTagComponentsModule } from '@core/tag/components/components.module';
 
 @NgModule({
     declarations: [
@@ -31,7 +32,8 @@ import { AddonModBookIndexComponent } from './index/index';
         TranslateModule.forChild(),
         CoreComponentsModule,
         CoreDirectivesModule,
-        CoreCourseComponentsModule
+        CoreCourseComponentsModule,
+        CoreTagComponentsModule
     ],
     providers: [
     ],

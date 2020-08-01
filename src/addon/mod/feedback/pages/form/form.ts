@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -82,10 +82,10 @@ export class AddonModFeedbackFormPage implements OnDestroy {
         this.currentSite = sitesProvider.getCurrentSite();
 
         // Refresh online status when changes.
-        this.onlineObserver = network.onchange().subscribe((online) => {
+        this.onlineObserver = network.onchange().subscribe(() => {
             // Execute the callback in the Angular zone, so change detection doesn't stop working.
             zone.run(() => {
-                this.offline = !online;
+                this.offline = !this.appProvider.isOnline();
             });
         });
     }
@@ -95,7 +95,7 @@ export class AddonModFeedbackFormPage implements OnDestroy {
      */
     ionViewDidLoad(): void {
         this.fetchData().then(() => {
-            this.feedbackProvider.logView(this.feedback.id, true).then(() => {
+            this.feedbackProvider.logView(this.feedback.id, this.feedback.name, true).then(() => {
                 this.courseProvider.checkModuleCompletion(this.courseId, this.module.completiondata);
             }).catch(() => {
                 // Ignore errors.
@@ -113,7 +113,7 @@ export class AddonModFeedbackFormPage implements OnDestroy {
     /**
      * Check if we can leave the page or not.
      *
-     * @return {boolean | Promise<void>} Resolved if we can leave it, rejected if not.
+     * @return Resolved if we can leave it, rejected if not.
      */
     ionViewCanLeave(): boolean | Promise<void> {
         if (this.forceLeave) {
@@ -137,7 +137,7 @@ export class AddonModFeedbackFormPage implements OnDestroy {
     /**
      * Fetch all the data required for the view.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fetchData(): Promise<any> {
         this.offline = !this.appProvider.isOnline();
@@ -183,7 +183,7 @@ export class AddonModFeedbackFormPage implements OnDestroy {
     /**
      * Fetch access information.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fetchAccessData(): Promise<any> {
         return this.feedbackProvider.getFeedbackAccessInformation(this.feedback.id, this.offline, true).catch((error) => {
@@ -246,8 +246,8 @@ export class AddonModFeedbackFormPage implements OnDestroy {
     /**
      * Function to allow page navigation through the questions form.
      *
-     * @param  {boolean}       goPrevious If true it will go back to the previous page, if false, it will go forward.
-     * @return {Promise<void>}            Resolved when done.
+     * @param goPrevious If true it will go back to the previous page, if false, it will go forward.
+     * @return Resolved when done.
      */
     gotoPage(goPrevious: boolean): Promise<void> {
         this.domUtils.scrollToTop(this.content);
@@ -279,6 +279,8 @@ export class AddonModFeedbackFormPage implements OnDestroy {
                     const promises = [];
                     promises.push(this.feedbackProvider.invalidateFeedbackAccessInformationData(this.feedback.id));
                     promises.push(this.feedbackProvider.invalidateResumePageData(this.feedback.id));
+
+                    this.eventsProvider.trigger(CoreEventsProvider.ACTIVITY_DATA_SENT, { module: 'feedback' });
 
                     return Promise.all(promises).then(() => {
                         return this.fetchAccessData();

@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -109,8 +109,8 @@ export class InAppBrowserObjectMock {
     /**
      * Execute a JS script.
      *
-     * @param {any} details Details of the script to run, specifying either a file or code key.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param details Details of the script to run, specifying either a file or code key.
+     * @return Promise resolved when done.
      */
     executeScript(details: any): Promise<any> {
         return new Promise((resolve, reject): void => {
@@ -129,8 +129,8 @@ export class InAppBrowserObjectMock {
     /**
      * Recursive function to get the launch URL from the contents of a BrowserWindow.
      *
-     * @param {number} [retry=0] Retry number.
-     * @return {Promise<string>} Promise resolved with the launch URL.
+     * @param retry Retry number.
+     * @return Promise resolved with the launch URL.
      */
     protected getLaunchUrl(retry: number = 0): Promise<string> {
 
@@ -172,8 +172,8 @@ export class InAppBrowserObjectMock {
     /**
      * Insert CSS.
      *
-     * @param {any} details Details of the CSS to insert, specifying either a file or code key.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param details Details of the CSS to insert, specifying either a file or code key.
+     * @return Promise resolved when done.
      */
     insertCSS(details: any): Promise<any> {
         return new Promise((resolve, reject): void => {
@@ -194,9 +194,9 @@ export class InAppBrowserObjectMock {
     /**
      * Listen to events happening.
      *
-     * @param {string} name Name of the event.
-     * @return {Observable<InAppBrowserEvent>} Observable that will listen to the event on subscribe, and will stop listening
-     *                                         to the event on unsubscribe.
+     * @param name Name of the event.
+     * @return Observable that will listen to the event on subscribe, and will stop listening
+     *         to the event on unsubscribe.
      */
     on(name: string): Observable<InAppBrowserEvent> {
         // Create the observable.
@@ -224,31 +224,38 @@ export class InAppBrowserObjectMock {
                     }
                 };
 
-            switch (name) {
-                case 'loadstart':
-                    this.window.webContents.on('did-start-loading', received);
+            if (!this.window.isDestroyed() && !this.window.webContents.isDestroyed()) {
+                switch (name) {
+                    case 'loadstart':
+                        this.window.webContents.on('did-start-loading', received);
 
-                    if (this.isSSO) {
-                        // Linux doesn't support custom URL Schemes. Check if launch page is loaded.
-                        this.window.webContents.on('did-finish-load', finishLoad);
-                    }
-                    break;
+                        if (this.isSSO) {
+                            // Linux doesn't support custom URL Schemes. Check if launch page is loaded.
+                            this.window.webContents.on('did-finish-load', finishLoad);
+                        }
+                        break;
 
-                case 'loadstop':
-                    this.window.webContents.on('did-finish-load', received);
-                    break;
+                    case 'loadstop':
+                        this.window.webContents.on('did-finish-load', received);
+                        break;
 
-                case 'loaderror':
-                    this.window.webContents.on('did-fail-load', received);
-                    break;
-                case 'exit':
-                    this.window.on('close', received);
-                    break;
-                default:
+                    case 'loaderror':
+                        this.window.webContents.on('did-fail-load', received);
+                        break;
+                    case 'exit':
+                        this.window.on('close', received);
+                        break;
+                    default:
+                }
             }
 
             return (): void => {
                 // Unsubscribing. We need to remove the listeners.
+                if (this.window.isDestroyed() || this.window.webContents.isDestroyed()) {
+                    // Page has been destroyed already, no need to remove listeners.
+                    return;
+                }
+
                 switch (name) {
                     case 'loadstart':
                         this.window.webContents.removeListener('did-start-loading', received);

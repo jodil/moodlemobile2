@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -50,6 +50,7 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
         }
     }
     @Output() completionChanged?: EventEmitter<any>; // Will emit an event when the module completion changes.
+    @Output() statusChanged?: EventEmitter<any>; // Will emit an event when the download status changes.
 
     downloadStatus: string;
     canCheckUpdates: boolean;
@@ -66,6 +67,7 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
             protected eventsProvider: CoreEventsProvider, protected sitesProvider: CoreSitesProvider,
             protected courseProvider: CoreCourseProvider) {
         this.completionChanged = new EventEmitter();
+        this.statusChanged = new EventEmitter();
     }
 
     /**
@@ -109,7 +111,7 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
     /**
      * Function called when the module is clicked.
      *
-     * @param {Event} event Click event.
+     * @param event Click event.
      */
     moduleClicked(event: Event): void {
         if (this.module.uservisible !== false && this.module.handlerData.action) {
@@ -120,8 +122,8 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
     /**
      * Function called when a button is clicked.
      *
-     * @param {Event} event Click event.
-     * @param {CoreCourseModuleHandlerButton} button The clicked button.
+     * @param event Click event.
+     * @param button The clicked button.
      */
     buttonClicked(event: Event, button: CoreCourseModuleHandlerButton): void {
         if (button && button.action) {
@@ -135,7 +137,7 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
     /**
      * Download the module.
      *
-     * @param {boolean} refresh Whether it's refreshing.
+     * @param refresh Whether it's refreshing.
      */
     download(refresh: boolean): void {
         if (!this.prefetchHandler) {
@@ -148,6 +150,13 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
         // Get download size to ask for confirm if it's high.
         this.prefetchHandler.getDownloadSize(this.module, this.courseId, true).then((size) => {
             return this.courseHelper.prefetchModule(this.prefetchHandler, this.module, size, this.courseId, refresh);
+        }).then(() => {
+            const eventData = {
+                sectionId: this.section.id,
+                moduleId: this.module.id,
+                courseId: this.courseId
+            };
+            this.statusChanged.emit(eventData);
         }).catch((error) => {
             // Error, hide spinner.
             this.spinner = false;
@@ -160,7 +169,7 @@ export class CoreCourseModuleComponent implements OnInit, OnDestroy {
     /**
      * Show download buttons according to module status.
      *
-     * @param {string} status Module status.
+     * @param status Module status.
      */
     protected showStatus(status: string): void {
         if (status) {

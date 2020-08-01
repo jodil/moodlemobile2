@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Directive, Input, AfterViewInit, ElementRef, OnChanges, SimpleChange } from '@angular/core';
+import { Directive, Input, AfterViewInit, ElementRef, OnChanges, SimpleChange, Output, EventEmitter } from '@angular/core';
 import { Platform } from 'ionic-angular';
 import { CoreAppProvider } from '@providers/app';
 import { CoreLoggerProvider } from '@providers/logger';
+import { CoreFile } from '@providers/file';
 import { CoreFilepoolProvider } from '@providers/filepool';
 import { CoreSitesProvider } from '@providers/sites';
 import { CoreDomUtilsProvider } from '@providers/utils/dom';
@@ -43,14 +44,24 @@ export class CoreExternalContentDirective implements AfterViewInit, OnChanges {
     @Input() href?: string;
     @Input('target-src') targetSrc?: string;
     @Input() poster?: string;
+    @Output() onLoad = new EventEmitter(); // Emitted when content is loaded. Only for images.
 
+    loaded = false;
     protected element: HTMLElement;
     protected logger;
     protected initialized = false;
 
-    constructor(element: ElementRef, logger: CoreLoggerProvider, private filepoolProvider: CoreFilepoolProvider,
-            private platform: Platform, private sitesProvider: CoreSitesProvider, private domUtils: CoreDomUtilsProvider,
-            private urlUtils: CoreUrlUtilsProvider, private appProvider: CoreAppProvider, private utils: CoreUtilsProvider) {
+    invalid = false;
+
+    constructor(element: ElementRef,
+            logger: CoreLoggerProvider,
+            protected filepoolProvider: CoreFilepoolProvider,
+            protected platform: Platform,
+            protected sitesProvider: CoreSitesProvider,
+            protected domUtils: CoreDomUtilsProvider,
+            protected urlUtils: CoreUrlUtilsProvider,
+            protected appProvider: CoreAppProvider,
+            protected utils: CoreUtilsProvider) {
         // This directive can be added dynamically. In that case, the first param is the HTMLElement.
         this.element = element.nativeElement || element;
         this.logger = logger.getInstance('CoreExternalContentDirective');
@@ -80,7 +91,7 @@ export class CoreExternalContentDirective implements AfterViewInit, OnChanges {
     /**
      * Add a new source with a certain URL as a sibling of the current element.
      *
-     * @param {string} url URL to use in the source.
+     * @param url URL to use in the source.
      */
     protected addSource(url: string): void {
         if (this.element.tagName !== 'SOURCE') {
@@ -140,23 +151,42 @@ export class CoreExternalContentDirective implements AfterViewInit, OnChanges {
             }
 
         } else {
+            this.invalid = true;
+
+            return;
+        }
+
+        // Avoid handling data url's.
+        if (url && url.indexOf('data:') === 0) {
+            this.invalid = true;
+            this.onLoad.emit();
+            this.loaded = true;
+
             return;
         }
 
         this.handleExternalContent(targetAttr, url, siteId).catch(() => {
-            // Ignore errors.
+            // Error handling content. Make sure the loaded event is triggered for images.
+            if (tagName === 'IMG') {
+                if (url) {
+                    this.waitForLoad();
+                } else {
+                    this.onLoad.emit();
+                    this.loaded = true;
+                }
+            }
         });
     }
 
     /**
      * Handle external content, setting the right URL.
      *
-     * @param {string} targetAttr Attribute to modify.
-     * @param {string} url Original URL to treat.
-     * @param {string} [siteId] Site ID.
-     * @return {Promise<any>} Promise resolved if the element is successfully treated.
+     * @param targetAttr Attribute to modify.
+     * @param url Original URL to treat.
+     * @param siteId Site ID.
+     * @return Promise resolved if the element is successfully treated.
      */
-    protected handleExternalContent(targetAttr: string, url: string, siteId?: string): Promise<any> {
+    protected async handleExternalContent(targetAttr: string, url: string, siteId?: string): Promise<any> {
 
         const tagName = this.element.tagName;
 
@@ -184,81 +214,86 @@ export class CoreExternalContentDirective implements AfterViewInit, OnChanges {
 
         }
 
-        if (!url || !url.match(/^https?:\/\//i) || (tagName === 'A' && !this.urlUtils.isDownloadableUrl(url))) {
+        if (!url || !url.match(/^https?:\/\//i) || this.urlUtils.isLocalFileUrl(url) ||
+                (tagName === 'A' && !this.urlUtils.isDownloadableUrl(url))) {
+
             this.logger.debug('Ignoring non-downloadable URL: ' + url);
             if (tagName === 'SOURCE') {
                 // Restoring original src.
                 this.addSource(url);
             }
 
-            return Promise.reject(null);
+            throw 'Non-downloadable URL';
         }
 
-        // Get the webservice pluginfile URL, we ignore failures here.
-        return this.sitesProvider.getSite(siteId).then((site) => {
-            if (!site.canDownloadFiles() && this.urlUtils.isPluginFileUrl(url)) {
-                this.element.parentElement.removeChild(this.element); // Remove element since it'll be broken.
+        const site = await this.sitesProvider.getSite(siteId);
 
-                return Promise.reject(null);
+        if (!site.canDownloadFiles() && this.urlUtils.isPluginFileUrl(url)) {
+            this.element.parentElement.removeChild(this.element); // Remove element since it'll be broken.
+
+            throw 'Site doesn\'t allow downloading files.';
+        }
+
+        // Download images, tracks and posters if size is unknown.
+        const dwnUnknown = tagName == 'IMG' || tagName == 'TRACK' || targetAttr == 'poster';
+        let finalUrl: string;
+
+        if (targetAttr === 'src' && tagName !== 'SOURCE' && tagName !== 'TRACK' && tagName !== 'VIDEO' && tagName !== 'AUDIO') {
+            finalUrl = await this.filepoolProvider.getSrcByUrl(siteId, url, this.component, this.componentId, 0, true, dwnUnknown);
+        } else {
+            finalUrl = await this.filepoolProvider.getUrlByUrl(siteId, url, this.component, this.componentId, 0, true, dwnUnknown);
+
+            finalUrl = CoreFile.instance.convertFileSrc(finalUrl);
+        }
+
+        if (!this.urlUtils.isLocalFileUrl(finalUrl)) {
+            /* In iOS, if we use the same URL in embedded file and background download then the download only
+               downloads a few bytes (cached ones). Add a hash to the URL so both URLs are different. */
+            finalUrl = finalUrl + '#moodlemobile-embedded';
+        }
+
+        this.logger.debug('Using URL ' + finalUrl + ' for ' + url);
+        if (tagName === 'SOURCE') {
+            // The browser does not catch changes in SRC, we need to add a new source.
+            this.addSource(finalUrl);
+        } else {
+            if (tagName === 'IMG') {
+                this.loaded = false;
+                this.waitForLoad();
+            }
+            this.element.setAttribute(targetAttr, finalUrl);
+            this.element.setAttribute('data-original-' + targetAttr, url);
+        }
+
+        // Set events to download big files (not downloaded automatically).
+        if (!this.urlUtils.isLocalFileUrl(finalUrl) && targetAttr != 'poster' &&
+            (tagName == 'VIDEO' || tagName == 'AUDIO' || tagName == 'A' || tagName == 'SOURCE')) {
+            const eventName = tagName == 'A' ? 'click' : 'play';
+            let clickableEl = this.element;
+
+            if (tagName == 'SOURCE') {
+                clickableEl = <HTMLElement> this.domUtils.closest(this.element, 'video,audio');
+                if (!clickableEl) {
+                    return;
+                }
             }
 
-            // Download images, tracks and posters if size is unknown.
-            const dwnUnknown = tagName == 'IMG' || tagName == 'TRACK' || targetAttr == 'poster';
-            let promise;
-
-            if (targetAttr === 'src' && tagName !== 'SOURCE' && tagName !== 'TRACK' && tagName !== 'VIDEO' &&
-                    tagName !== 'AUDIO') {
-                promise = this.filepoolProvider.getSrcByUrl(siteId, url, this.component, this.componentId, 0, true, dwnUnknown);
-            } else {
-                promise = this.filepoolProvider.getUrlByUrl(siteId, url, this.component, this.componentId, 0, true, dwnUnknown);
-            }
-
-            return promise.then((finalUrl) => {
-                if (finalUrl.match(/^https?:\/\//i)) {
-                    /* In iOS, if we use the same URL in embedded file and background download then the download only
-                       downloads a few bytes (cached ones). Add a hash to the URL so both URLs are different. */
-                    finalUrl = finalUrl + '#moodlemobile-embedded';
-                }
-
-                this.logger.debug('Using URL ' + finalUrl + ' for ' + url);
-                if (tagName === 'SOURCE') {
-                    // The browser does not catch changes in SRC, we need to add a new source.
-                    this.addSource(finalUrl);
-                } else {
-                    this.element.setAttribute(targetAttr, finalUrl);
-                }
-
-                // Set events to download big files (not downloaded automatically).
-                if (finalUrl.indexOf('http') === 0 && targetAttr != 'poster' &&
-                    (tagName == 'VIDEO' || tagName == 'AUDIO' || tagName == 'A' || tagName == 'SOURCE')) {
-                    const eventName = tagName == 'A' ? 'click' : 'play';
-                    let clickableEl = this.element;
-
-                    if (tagName == 'SOURCE') {
-                        clickableEl = <HTMLElement> this.domUtils.closest(this.element, 'video,audio');
-                        if (!clickableEl) {
-                            return;
-                        }
-                    }
-
-                    clickableEl.addEventListener(eventName, () => {
-                        // User played media or opened a downloadable link.
-                        // Download the file if in wifi and it hasn't been downloaded already (for big files).
-                        if (this.appProvider.isWifi()) {
-                            // We aren't using the result, so it doesn't matter which of the 2 functions we call.
-                            this.filepoolProvider.getUrlByUrl(siteId, url, this.component, this.componentId, 0, false);
-                        }
-                    });
+            clickableEl.addEventListener(eventName, () => {
+                // User played media or opened a downloadable link.
+                // Download the file if in wifi and it hasn't been downloaded already (for big files).
+                if (this.appProvider.isWifi()) {
+                    // We aren't using the result, so it doesn't matter which of the 2 functions we call.
+                    this.filepoolProvider.getUrlByUrl(siteId, url, this.component, this.componentId, 0, false);
                 }
             });
-        });
+        }
     }
 
     /**
      * Handle inline styles, trying to download referenced files.
      *
-     * @param {string} siteId Site ID.
-     * @return {Promise<any>} Promise resolved if the element is successfully treated.
+     * @param siteId Site ID.
+     * @return Promise resolved if the element is successfully treated.
      */
     protected handleInlineStyles(siteId: string): Promise<any> {
         let inlineStyles = this.element.getAttribute('style');
@@ -287,5 +322,20 @@ export class CoreExternalContentDirective implements AfterViewInit, OnChanges {
         return this.utils.allPromises(promises).then(() => {
             this.element.setAttribute('style', inlineStyles);
         });
+    }
+
+    /**
+     * Wait for the image to be loaded or error, and emit an event when it happens.
+     */
+    protected waitForLoad(): void {
+        const listener = (): void => {
+            this.element.removeEventListener('load', listener);
+            this.element.removeEventListener('error', listener);
+            this.onLoad.emit();
+            this.loaded = true;
+        };
+
+        this.element.addEventListener('load', listener);
+        this.element.addEventListener('error', listener);
     }
 }

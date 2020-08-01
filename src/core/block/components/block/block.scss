@@ -1,5 +1,6 @@
 ion-app.app-root core-block {
   position: relative;
+  display: block;
 
   core-loading.core-loading-center {
     display: block;
@@ -18,7 +19,8 @@ ion-app.app-root core-block {
   }
 
   .item-divider {
-    @include safe-area-padding-horizontal(null, 0px);
+    @include padding-horizontal(null, 0px);
+    min-height: 60px;
   }
 
   .item-divider .core-button-spinner {
@@ -27,5 +29,11 @@ ion-app.app-root core-block {
 
   .item-divider .icon {
     color: $black;
+  }
+
+  @include darkmode() {
+    .item-divider .icon {
+      color: $core-dark-text-color
+    }
   }
 }

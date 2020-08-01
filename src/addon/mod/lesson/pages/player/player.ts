@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ElementRef } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { IonicPage, NavParams, Content, PopoverController, ModalController, Modal, NavController } from 'ionic-angular';
 import { TranslateService } from '@ngx-translate/core';
 import { CoreAppProvider } from '@providers/app';
 import { CoreEventsProvider } from '@providers/events';
-import { CoreLoggerProvider } from '@providers/logger';
 import { CoreSitesProvider } from '@providers/sites';
 import { CoreSyncProvider } from '@providers/sync';
 import { CoreDomUtilsProvider } from '@providers/utils/dom';
 import { CoreTimeUtilsProvider } from '@providers/utils/time';
 import { CoreUrlUtilsProvider } from '@providers/utils/url';
 import { CoreUtilsProvider } from '@providers/utils/utils';
+import { MoodleMobileApp } from '../../../../../app/app.component';
 import { AddonModLessonProvider } from '../../providers/lesson';
 import { AddonModLessonOfflineProvider } from '../../providers/lesson-offline';
 import { AddonModLessonSyncProvider } from '../../providers/lesson-sync';
@@ -40,6 +40,7 @@ import { AddonModLessonHelperProvider } from '../../providers/helper';
 })
 export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     @ViewChild(Content) content: Content;
+    @ViewChild('questionFormEl') formElement: ElementRef;
 
     component = AddonModLessonProvider.COMPONENT;
     LESSON_EOL = AddonModLessonProvider.LESSON_EOL;
@@ -78,14 +79,15 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     protected loadingMenu: boolean; // Whether the lesson menu is being loaded.
     protected lessonPages: any[]; // Lesson pages (for the lesson menu).
 
-    constructor(protected navParams: NavParams, logger: CoreLoggerProvider, protected translate: TranslateService,
+    constructor(protected navParams: NavParams, protected translate: TranslateService,
             protected eventsProvider: CoreEventsProvider, protected sitesProvider: CoreSitesProvider,
             protected syncProvider: CoreSyncProvider, protected domUtils: CoreDomUtilsProvider, popoverCtrl: PopoverController,
             protected timeUtils: CoreTimeUtilsProvider, protected lessonProvider: AddonModLessonProvider,
             protected lessonHelper: AddonModLessonHelperProvider, protected lessonSync: AddonModLessonSyncProvider,
             protected lessonOfflineProvider: AddonModLessonOfflineProvider, protected cdr: ChangeDetectorRef,
             modalCtrl: ModalController, protected navCtrl: NavController, protected appProvider: CoreAppProvider,
-            protected utils: CoreUtilsProvider, protected urlUtils: CoreUrlUtilsProvider, protected fb: FormBuilder) {
+            protected utils: CoreUtilsProvider, protected urlUtils: CoreUrlUtilsProvider, protected fb: FormBuilder,
+            protected mmApp: MoodleMobileApp) {
 
         this.lessonId = navParams.get('lessonId');
         this.courseId = navParams.get('courseId');
@@ -99,7 +101,11 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
         // Create the navigation modal.
         this.menuModal = modalCtrl.create('AddonModLessonMenuModalPage', {
             page: this
-        });
+        }, { cssClass: 'core-modal-lateral',
+            showBackdrop: true,
+            enableBackdropDismiss: true,
+            enterAnimation: 'core-modal-lateral-transition',
+            leaveAnimation: 'core-modal-lateral-transition' });
     }
 
     /**
@@ -128,27 +134,34 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Check if we can leave the page or not.
      *
-     * @return {boolean|Promise<void>} Resolved if we can leave it, rejected if not.
+     * @return Resolved if we can leave it, rejected if not.
      */
-    ionViewCanLeave(): boolean | Promise<void> {
+    async ionViewCanLeave(): Promise<void> {
         if (this.forceLeave) {
-            return true;
+            return;
         }
 
         if (this.question && !this.eolData && !this.processData && this.originalData) {
             // Question shown. Check if there is any change.
             if (!this.utils.basicLeftCompare(this.questionForm.getRawValue(), this.originalData, 3)) {
-                 return this.domUtils.showConfirm(this.translate.instant('core.confirmcanceledit'));
+                 await this.domUtils.showConfirm(this.translate.instant('core.confirmcanceledit'));
             }
         }
 
-        return Promise.resolve();
+        this.domUtils.triggerFormCancelledEvent(this.formElement, this.sitesProvider.getCurrentSiteId());
+    }
+
+    /**
+     * Runs when the page is about to leave and no longer be the active page.
+     */
+    ionViewWillLeave(): void {
+        this.mmApp.closeModal();
     }
 
     /**
      * A button was clicked.
      *
-     * @param {any} data Button data.
+     * @param data Button data.
      */
     buttonClicked(data: any): void {
         this.processPage(data);
@@ -157,11 +170,11 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Call a function and go offline if allowed and the call fails.
      *
-     * @param {Function} func Function to call.
-     * @param {any[]} args Arguments to pass to the function.
-     * @param {number} offlineParamPos Position of the offline parameter in the args.
-     * @param {number} [jumpsParamPos] Position of the jumps parameter in the args.
-     * @return {Promise<any>} Promise resolved in success, rejected otherwise.
+     * @param func Function to call.
+     * @param args Arguments to pass to the function.
+     * @param offlineParamPos Position of the offline parameter in the args.
+     * @param jumpsParamPos Position of the jumps parameter in the args.
+     * @return Promise resolved in success, rejected otherwise.
      */
     protected callFunction(func: Function, args: any[], offlineParamPos: number, jumpsParamPos?: number): Promise<any> {
         return func.apply(func, args).catch((error) => {
@@ -191,8 +204,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Change the page from menu or when continuing from a feedback page.
      *
-     * @param {number} pageId Page to load.
-     * @param {boolean} [ignoreCurrent] If true, allow loading current page.
+     * @param pageId Page to load.
+     * @param ignoreCurrent If true, allow loading current page.
      */
     changePage(pageId: number, ignoreCurrent?: boolean): void {
         if (!ignoreCurrent && !this.eolData && this.currentPage == pageId) {
@@ -213,7 +226,7 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Get the lesson data and load the page.
      *
-     * @return {Promise<boolean>} Promise resolved with true if success, resolved with false otherwise.
+     * @return Promise resolved with true if success, resolved with false otherwise.
      */
     protected fetchLessonData(): Promise<boolean> {
         // Wait for any ongoing sync to finish. We won't sync a lesson while it's being played.
@@ -306,8 +319,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Finish the retake.
      *
-     * @param {boolean} [outOfTime] Whether the retake is finished because the user ran out of time.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param outOfTime Whether the retake is finished because the user ran out of time.
+     * @return Promise resolved when done.
      */
     protected finishRetake(outOfTime?: boolean): Promise<any> {
         let promise;
@@ -355,6 +368,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
             this.messages = this.messages.concat(data.messages);
             this.processData = undefined;
 
+            this.eventsProvider.trigger(CoreEventsProvider.ACTIVITY_DATA_SENT, { module: 'lesson' });
+
             // Format activity link if present.
             if (this.eolData && this.eolData.activitylink) {
                 this.eolData.activitylink.value = this.lessonHelper.formatActivityLink(this.eolData.activitylink.value);
@@ -377,8 +392,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Jump to a certain page after performing an action.
      *
-     * @param {number} pageId The page to load.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param pageId The page to load.
+     * @return Promise resolved when done.
      */
     protected jumpToPage(pageId: number): Promise<any> {
         if (pageId === 0) {
@@ -402,8 +417,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Start or continue a retake.
      *
-     * @param {number} pageId The page to load.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param pageId The page to load.
+     * @return Promise resolved when done.
      */
     protected launchRetake(pageId: number): Promise<any> {
         let promise;
@@ -444,7 +459,7 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Load the lesson menu.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected loadMenu(): Promise<any> {
         if (this.loadingMenu) {
@@ -470,8 +485,8 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Load a certain page.
      *
-     * @param {number} pageId The page to load.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param pageId The page to load.
+     * @return Promise resolved when done.
      */
     protected loadPage(pageId: number): Promise<any> {
         if (pageId == AddonModLessonProvider.LESSON_EOL) {
@@ -526,16 +541,21 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Process a page, sending some data.
      *
-     * @param {any} data The data to send.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param data The data to send.
+     * @param formSubmitted Whether a form was submitted.
+     * @return Promise resolved when done.
      */
-    protected processPage(data: any): Promise<any> {
+    protected processPage(data: any, formSubmitted?: boolean): Promise<any> {
         this.loaded = false;
 
         const args = [this.lesson, this.courseId, this.pageData, data, this.password, this.review, this.offline, this.accessInfo,
                 this.jumps];
 
         return this.callFunction(this.lessonProvider.processPage.bind(this.lessonProvider), args, 6, 8).then((result) => {
+            if (formSubmitted) {
+                this.domUtils.triggerFormSubmittedEvent(this.formElement, result.sent, this.sitesProvider.getCurrentSiteId());
+            }
+
             if (!this.offline && !this.review && this.lessonProvider.isLessonOffline(this.lesson)) {
                 // Lesson allows offline and the user changed some data in server. Update cached data.
                 const retake = this.accessInfo.attemptscount;
@@ -596,7 +616,7 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Review the lesson.
      *
-     * @param {number} pageId Page to load.
+     * @param pageId Page to load.
      */
     reviewLesson(pageId: number): void {
         this.loaded = false;
@@ -613,7 +633,7 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
     /**
      * Submit a question.
      *
-     * @param {Event} e Event.
+     * @param e Event.
      */
     submitQuestion(e: Event): void {
         e.preventDefault();
@@ -624,7 +644,7 @@ export class AddonModLessonPlayerPage implements OnInit, OnDestroy {
         // Use getRawValue to include disabled values.
         const data = this.lessonHelper.prepareQuestionData(this.question, this.questionForm.getRawValue());
 
-        this.processPage(data).finally(() => {
+        this.processPage(data, true).finally(() => {
             this.loaded = true;
         });
     }

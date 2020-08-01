@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import { CoreSitesProvider } from '@providers/sites';
 import { CoreDomUtilsProvider } from '@providers/utils/dom';
 import { CoreTextUtilsProvider } from '@providers/utils/text';
 import { CoreTimeUtilsProvider } from '@providers/utils/time';
+import { CoreUtilsProvider } from '@providers/utils/utils';
 import { CoreUserProvider } from '@core/user/providers/user';
 import { AddonModLessonProvider } from '../../providers/lesson';
 import { AddonModLessonHelperProvider } from '../../providers/helper';
@@ -44,11 +45,13 @@ export class AddonModLessonUserRetakePage implements OnInit {
     protected lessonId: number; // The lesson ID the retake belongs to.
     protected userId: number; // User ID to see the retakes.
     protected retakeNumber: number; // Number of the initial retake to see.
+    protected previousSelectedRetake: number; // To be able to detect the previous selected retake when it has changed.
 
     constructor(navParams: NavParams, sitesProvider: CoreSitesProvider, protected textUtils: CoreTextUtilsProvider,
             protected translate: TranslateService, protected domUtils: CoreDomUtilsProvider,
             protected userProvider: CoreUserProvider, protected timeUtils: CoreTimeUtilsProvider,
-            protected lessonProvider: AddonModLessonProvider, protected lessonHelper: AddonModLessonHelperProvider) {
+            protected lessonProvider: AddonModLessonProvider, protected lessonHelper: AddonModLessonHelperProvider,
+            protected utils: CoreUtilsProvider) {
 
         this.lessonId = navParams.get('lessonId');
         this.courseId = navParams.get('courseId');
@@ -69,13 +72,14 @@ export class AddonModLessonUserRetakePage implements OnInit {
     /**
      * Change the retake displayed.
      *
-     * @param {number} retakeNumber The new retake number.
+     * @param retakeNumber The new retake number.
      */
     changeRetake(retakeNumber: number): void {
         this.loaded = false;
 
         this.setRetake(retakeNumber).catch((error) => {
-            this.domUtils.showErrorModalDefault(error, 'Error getting attempt.');
+            this.selectedRetake = this.previousSelectedRetake;
+            this.domUtils.showErrorModal(this.utils.addDataNotDownloadedError(error, 'Error getting attempt.'));
         }).finally(() => {
             this.loaded = true;
         });
@@ -84,7 +88,7 @@ export class AddonModLessonUserRetakePage implements OnInit {
     /**
      * Pull to refresh.
      *
-     * @param {any} refresher Refresher.
+     * @param refresher Refresher.
      */
     doRefresh(refresher: any): void {
         this.refreshData().finally(() => {
@@ -95,7 +99,7 @@ export class AddonModLessonUserRetakePage implements OnInit {
     /**
      * Get lesson and retake data.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fetchData(): Promise<any> {
         return this.lessonProvider.getLessonById(this.courseId, this.lessonId).then((lessonData) => {
@@ -128,7 +132,7 @@ export class AddonModLessonUserRetakePage implements OnInit {
 
             student.bestgrade = this.textUtils.roundToDecimals(student.bestgrade, 2);
             student.attempts.forEach((retake) => {
-                if (this.retakeNumber == retake.try) {
+                if (!this.selectedRetake && this.retakeNumber == retake.try) {
                     // The retake specified as parameter exists. Use it.
                     this.selectedRetake = this.retakeNumber;
                 }
@@ -162,7 +166,7 @@ export class AddonModLessonUserRetakePage implements OnInit {
     /**
      * Refreshes data.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected refreshData(): Promise<any> {
         const promises = [];
@@ -183,8 +187,8 @@ export class AddonModLessonUserRetakePage implements OnInit {
     /**
      * Set the retake to view and load its data.
      *
-     * @param {number}retakeNumber Retake number to set.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param retakeNumber Retake number to set.
+     * @return Promise resolved when done.
      */
     protected setRetake(retakeNumber: number): Promise<any> {
         this.selectedRetake = retakeNumber;
@@ -223,6 +227,7 @@ export class AddonModLessonUserRetakePage implements OnInit {
             }
 
             this.retake = data;
+            this.previousSelectedRetake = this.selectedRetake;
         });
     }
 }

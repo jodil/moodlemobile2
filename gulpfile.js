@@ -5,13 +5,15 @@ var gulp = require('gulp'),
     path = require('path'),
     slash = require('gulp-slash'),
     clipEmptyFiles = require('gulp-clip-empty-files'),
-    gutil = require('gulp-util'),
+    File = require('vinyl'),
     flatten = require('gulp-flatten'),
     npmPath = require('path'),
-    File = gutil.File,
+    concat = require('gulp-concat'),
+    htmlmin = require('gulp-htmlmin'),
+    bufferFrom = require('buffer-from'),
     exec = require('child_process').exec,
     license = '' +
-        '// (C) Copyright 2015 Martin Dougiamas\n' +
+        '// (C) Copyright 2015 Moodle Pty Ltd.\n' +
         '//\n' +
         '// Licensed under the Apache License, Version 2.0 (the "License");\n' +
         '// you may not use this file except in compliance with the License.\n' +
@@ -113,7 +115,7 @@ function treatMergedData(data) {
         mergedOrdered[k] = merged[k];
     });
 
-    return new Buffer(JSON.stringify(mergedOrdered, null, 4));
+    return bufferFrom(JSON.stringify(mergedOrdered, null, 4));
 }
 
 /**
@@ -257,7 +259,7 @@ gulp.task('config', function(done) {
 
                 contents += '}\n';
 
-                file.contents = new Buffer(contents);
+                file.contents = bufferFrom(contents);
                 this.emit('data', file);
             }))
             .pipe(rename('configconstants.ts'))
@@ -292,7 +294,144 @@ gulp.task('copy-component-templates', function(done) {
 
     gulp.src(templatesSrc, { allowEmpty: true })
         .pipe(flatten())
+        // Check options here: https://github.com/kangax/html-minifier
+        .pipe(htmlmin({
+          collapseWhitespace: true,
+          removeComments: true,
+          caseSensitive: true
+        }))
         .pipe(gulp.dest(templatesDest))
         .on('end', done);
 });
 
+/**
+ * Finds the file and returns its content.
+ *
+ * @param  {string} capture     Import file path.
+ * @param  {string} baseDir     Directory where the file was found.
+ * @param  {string} paths       Alternative paths where to find the imports.
+ * @param  {Array} parsedFiles  Yet parsed files to reduce size of the result.
+ * @return {string}             Partially combined scss.
+ */
+function getReplace(capture, baseDir, paths, parsedFiles) {
+    var parse   = path.parse(path.resolve(baseDir, capture + '.scss'));
+    var file    = parse.dir + '/' + parse.name;
+
+    if (file.slice(-3) === '.wp') {
+        console.log('Windows Phone not supported "' + capture);
+        // File was already parsed, leave the import commented.
+        return '// @import "' + capture + '";';
+    }
+
+    if (!fs.existsSync(file + '.scss')) {
+        // File not found, might be a partial file.
+        file    = parse.dir + '/_' + parse.name;
+    }
+
+    // If file still not found, try to find the file in the alternative paths.
+    var x = 0;
+    while (!fs.existsSync(file + '.scss') && paths.length > x) {
+        parse   = path.parse(path.resolve(paths[x], capture + '.scss'));
+        file    = parse.dir + '/' + parse.name;
+
+        x++;
+    }
+
+    file    = file + '.scss';
+
+    if (!fs.existsSync(file)) {
+        // File not found. Leave the import there.
+        console.log('File "' + capture + '" not found');
+        return '@import "' + capture + '";';
+    }
+
+    if (parsedFiles.indexOf(file) >= 0) {
+        console.log('File "' + capture + '" already parsed');
+        // File was already parsed, leave the import commented.
+        return '// @import "' + capture + '";';
+    }
+
+    parsedFiles.push(file);
+    var text = fs.readFileSync(file);
+
+    // Recursive call.
+    return scssCombine(text, parse.dir, paths, parsedFiles);
+}
+
+/**
+ * Combine scss files with its imports
+ *
+ * @param  {string} content     Scss string to read.
+ * @param  {string} baseDir     Directory where the file was found.
+ * @param  {string} paths       Alternative paths where to find the imports.
+ * @param  {Array} parsedFiles  Yet parsed files to reduce size of the result.
+ * @return {string}             Scss string with the replaces done.
+ */
+function scssCombine(content, baseDir, paths, parsedFiles) {
+
+    // Content is a Buffer, convert to string.
+    if (typeof content != "string") {
+        content = content.toString();
+    }
+
+    // Search of single imports.
+    var regex = /@import[ ]*['"](.*)['"][ ]*;/g;
+
+    if (regex.test(content)) {
+        return content.replace(regex, function(m, capture) {
+            if (capture == "bmma") {
+                return m;
+            }
+
+            return getReplace(capture, baseDir, paths, parsedFiles);
+        });
+    }
+
+    // Search of multiple imports.
+    regex = /@import(?:[ \n]+['"](.*)['"][,]?[ \n]*)+;/gm;
+    if (regex.test(content)) {
+        return content.replace(regex, function(m, capture) {
+            var text = "";
+
+            // Divide the import into multiple files.
+            regex = /['"]([^'"]*)['"]/g;
+            var captures = m.match(regex);
+            for (var x in captures) {
+                text += getReplace(captures[x].replace(/['"]+/g, ''), baseDir, paths, parsedFiles) + "\n";
+            }
+
+            return text;
+        });
+    }
+
+    return content;
+}
+
+gulp.task('combine-scss', function(done) {
+    var paths = [
+        'node_modules/ionic-angular/themes/',
+        'node_modules/font-awesome/scss/',
+        'node_modules/ionicons/dist/scss/'
+    ];
+
+    var parsedFiles = [];
+
+    gulp.src([
+            './src/theme/variables.scss',
+            './node_modules/ionic-angular/themes/ionic.globals.*.scss',
+            './node_modules/ionic-angular/themes/ionic.components.scss',
+            './src/**/*.scss'])  // define a source files
+        .pipe(through(function(file, encoding, callback) {
+            if (file.isNull()) {
+                return;
+            }
+
+            parsedFiles.push(file);
+            file.contents = bufferFrom(scssCombine(file.contents, path.dirname(file.path), paths, parsedFiles));
+
+            this.emit('data', file);
+        }))   // combine them based on @import and save it to stream
+        .pipe(concat('combined.scss')) // concat the stream output in single file
+        .pipe(gulp.dest('.'))  // save file to destination.
+        .on('end', done);
+});

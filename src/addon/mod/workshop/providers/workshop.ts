@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import { CoreSitesProvider } from '@providers/sites';
 import { CoreUtilsProvider } from '@providers/utils/utils';
 import { CoreCourseLogHelperProvider } from '@core/course/providers/log-helper';
 import { AddonModWorkshopOfflineProvider } from './offline';
+import { CoreSite } from '@classes/site';
 
 /**
  * Service that provides some features for workshops.
@@ -32,9 +33,9 @@ export class AddonModWorkshopProvider {
     static PHASE_ASSESSMENT = 30;
     static PHASE_EVALUATION = 40;
     static PHASE_CLOSED = 50;
-    static EXAMPLES_VOLUNTARY: 0;
-    static EXAMPLES_BEFORE_SUBMISSION: 1;
-    static EXAMPLES_BEFORE_ASSESSMENT: 2;
+    static EXAMPLES_VOLUNTARY = 0;
+    static EXAMPLES_BEFORE_SUBMISSION = 1;
+    static EXAMPLES_BEFORE_ASSESSMENT = 2;
     static SUBMISSION_TYPE_DISABLED = 0;
     static SUBMISSION_TYPE_AVAILABLE = 1;
     static SUBMISSION_TYPE_REQUIRED = 2;
@@ -56,8 +57,8 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop data WS calls.
      *
-     * @param  {number} courseId Course ID.
-     * @return {string}          Cache key.
+     * @param courseId Course ID.
+     * @return Cache key.
      */
     protected getWorkshopDataCacheKey(courseId: number): string {
         return this.ROOT_CACHE_KEY + 'workshop:' + courseId;
@@ -66,8 +67,8 @@ export class AddonModWorkshopProvider {
     /**
      * Get prefix cache key for all workshop activity data WS calls.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @return {string}            Cache key.
+     * @param workshopId Workshop ID.
+     * @return Cache key.
      */
     protected getWorkshopDataPrefixCacheKey(workshopId: number): string {
         return this.ROOT_CACHE_KEY + workshopId;
@@ -76,8 +77,8 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop access information data WS calls.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @return {string}            Cache key.
+     * @param workshopId Workshop ID.
+     * @return Cache key.
      */
     protected getWorkshopAccessInformationDataCacheKey(workshopId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':access';
@@ -86,8 +87,8 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop user plan data WS calls.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @return {string}            Cache key.
+     * @param workshopId Workshop ID.
+     * @return Cache key.
      */
     protected getUserPlanDataCacheKey(workshopId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':userplan';
@@ -96,10 +97,10 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop submissions data WS calls.
      *
-     * @param  {number} workshopId  Workshop ID.
-     * @param  {number} [userId=0]  User ID.
-     * @param  {number} [groupId=0] Group ID.
-     * @return {string}             Cache key.
+     * @param workshopId Workshop ID.
+     * @param userId User ID.
+     * @param groupId Group ID.
+     * @return Cache key.
      */
     protected getSubmissionsDataCacheKey(workshopId: number, userId: number = 0, groupId: number = 0): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':submissions:' + userId + ':' + groupId;
@@ -108,9 +109,9 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for a workshop submission data WS calls.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @return {string}              Cache key.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @return Cache key.
      */
     protected getSubmissionDataCacheKey(workshopId: number, submissionId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':submission:' + submissionId;
@@ -119,8 +120,8 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop grades data WS calls.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @return {string}            Cache key.
+     * @param workshopId Workshop ID.
+     * @return Cache key.
      */
     protected getGradesDataCacheKey(workshopId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':grades';
@@ -129,9 +130,9 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop grade report data WS calls.
      *
-     * @param  {number} workshopId  Workshop ID.
-     * @param  {number} [groupId=0] Group ID.
-     * @return {string}             Cache key.
+     * @param workshopId Workshop ID.
+     * @param groupId Group ID.
+     * @return Cache key.
      */
     protected getGradesReportDataCacheKey(workshopId: number, groupId: number = 0): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':report:' + groupId;
@@ -140,9 +141,9 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop submission assessments data WS calls.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @return {string}              Cache key.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @return Cache key.
      */
     protected getSubmissionAssessmentsDataCacheKey(workshopId: number, submissionId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':assessments:' + submissionId;
@@ -151,9 +152,9 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop reviewer assessments data WS calls.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {number} [userId=0] User ID or current user.
-     * @return {string}            Cache key.
+     * @param workshopId Workshop ID.
+     * @param userId User ID or current user.
+     * @return Cache key.
      */
     protected getReviewerAssessmentsDataCacheKey(workshopId: number, userId: number = 0): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':reviewerassessments:' + userId;
@@ -162,9 +163,9 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for a workshop assessment data WS calls.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} assessmentId Assessment ID.
-     * @return {string}              Cache key.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @return Cache key.
      */
     protected getAssessmentDataCacheKey(workshopId: number, assessmentId: number): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':assessment:' + assessmentId;
@@ -173,10 +174,10 @@ export class AddonModWorkshopProvider {
     /**
      * Get cache key for workshop assessment form data WS calls.
      *
-     * @param  {number} workshopId          Workshop ID.
-     * @param  {number} assessmentId        Assessment ID.
-     * @param  {string} [mode='assessment'] Mode assessment (default) or preview.
-     * @return {string}                     Cache key.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param mode Mode assessment (default) or preview.
+     * @return Cache key.
      */
     protected getAssessmentFormDataCacheKey(workshopId: number, assessmentId: number, mode: string = 'assessment'): string {
         return this.getWorkshopDataPrefixCacheKey(workshopId) + ':assessmentsform:' + assessmentId + ':' + mode;
@@ -185,8 +186,8 @@ export class AddonModWorkshopProvider {
     /**
      * Return whether or not the plugin is enabled in a certain site. Plugin is enabled if the workshop WS are available.
      *
-     * @param  {string} [siteId]  Site ID. If not defined, current site.
-     * @return {Promise<boolean>} Promise resolved with true if plugin is enabled, rejected or resolved with false otherwise.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved with true if plugin is enabled, rejected or resolved with false otherwise.
      */
     isPluginEnabled(siteId?: string): Promise<boolean> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -198,12 +199,12 @@ export class AddonModWorkshopProvider {
     /**
      * Get a workshop with key=value. If more than one is found, only the first will be returned.
      *
-     * @param  {number}  courseId           Course ID.
-     * @param  {string}  key                Name of the property to check.
-     * @param  {any}     value              Value to search.
-     * @param  {string}  [siteId]           Site ID. If not defined, current site.
-     * @param  {boolean} [forceCache=false] True to always get the value from cache, false otherwise. Default false.
-     * @return {Promise<any>}               Promise resolved when the workshop is retrieved.
+     * @param courseId Course ID.
+     * @param key Name of the property to check.
+     * @param value Value to search.
+     * @param siteId Site ID. If not defined, current site.
+     * @param forceCache True to always get the value from cache, false otherwise. Default false.
+     * @return Promise resolved when the workshop is retrieved.
      */
     protected getWorkshopByKey(courseId: number, key: string, value: any, siteId?: string, forceCache: boolean = false):
             Promise<any> {
@@ -212,7 +213,8 @@ export class AddonModWorkshopProvider {
                 courseids: [courseId]
             };
             const preSets: any = {
-                cacheKey: this.getWorkshopDataCacheKey(courseId)
+                cacheKey: this.getWorkshopDataCacheKey(courseId),
+                updateFrequency: CoreSite.FREQUENCY_RARELY
             };
 
             if (forceCache) {
@@ -248,11 +250,11 @@ export class AddonModWorkshopProvider {
     /**
      * Get a workshop by course module ID.
      *
-     * @param  {number}  courseId           Course ID.
-     * @param  {number}  cmId               Course module ID.
-     * @param  {string}  [siteId]           Site ID. If not defined, current site.
-     * @param  {boolean} [forceCache=false] True to always get the value from cache, false otherwise. Default false.
-     * @return {Promise<any>}               Promise resolved when the workshop is retrieved.
+     * @param courseId Course ID.
+     * @param cmId Course module ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @param forceCache True to always get the value from cache, false otherwise. Default false.
+     * @return Promise resolved when the workshop is retrieved.
      */
     getWorkshop(courseId: number, cmId: number, siteId?: string, forceCache: boolean = false): Promise<any> {
         return this.getWorkshopByKey(courseId, 'coursemodule', cmId, siteId, forceCache);
@@ -261,11 +263,11 @@ export class AddonModWorkshopProvider {
     /**
      * Get a workshop by ID.
      *
-     * @param  {number}  courseId           Course ID.
-     * @param  {number}  id                 Workshop ID.
-     * @param  {string}  [siteId]           Site ID. If not defined, current site.
-     * @param  {boolean} [forceCache=false] True to always get the value from cache, false otherwise. Default false.
-     * @return {Promise<any>}               Promise resolved when the workshop is retrieved.
+     * @param courseId Course ID.
+     * @param id Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @param forceCache True to always get the value from cache, false otherwise. Default false.
+     * @return Promise resolved when the workshop is retrieved.
      */
     getWorkshopById(courseId: number, id: number, siteId?: string, forceCache: boolean = false): Promise<any> {
         return this.getWorkshopByKey(courseId, 'id', id, siteId, forceCache);
@@ -274,9 +276,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop data.
      *
-     * @param  {number} courseId Course ID.
-     * @param  {string} [siteId] Site ID. If not defined, current site.
-     * @return {Promise<any>}    Promise resolved when the workshop is invalidated.
+     * @param courseId Course ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop is invalidated.
      */
     invalidateWorkshopData(courseId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -287,9 +289,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop data except files and module info.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the workshop is invalidated.
+     * @param workshopId Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop is invalidated.
      */
     invalidateWorkshopWSData(workshopId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -300,11 +302,11 @@ export class AddonModWorkshopProvider {
     /**
      * Get access information for a given workshop.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]             Site ID. If not defined, current site.
-     * @return {Promise<any>}                 Promise resolved when the workshop is retrieved.
+     * @param workshopId Workshop ID.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop is retrieved.
      */
     getWorkshopAccessInformation(workshopId: number, offline: boolean = false, ignoreCache: boolean = false, siteId?: string):
             Promise<any> {
@@ -330,9 +332,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop access information data.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateWorkshopAccessInformationData(workshopId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -343,11 +345,11 @@ export class AddonModWorkshopProvider {
     /**
      * Return the planner information for the given user.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any>}                Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getUserPlanPhases(workshopId: number, offline: boolean = false, ignoreCache: boolean = false, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -355,7 +357,8 @@ export class AddonModWorkshopProvider {
                 workshopid: workshopId
             };
             const preSets: any = {
-                cacheKey: this.getUserPlanDataCacheKey(workshopId)
+                cacheKey: this.getUserPlanDataCacheKey(workshopId),
+                updateFrequency: CoreSite.FREQUENCY_OFTEN
             };
 
             if (offline) {
@@ -378,9 +381,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop user plan data.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateUserPlanPhasesData(workshopId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -391,13 +394,13 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves all the workshop submissions visible by the current user or the one done by the given user.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {number}  [userId=0]          User ID, 0 means the current user.
-     * @param  {number}  [groupId=0]         Group id, 0 means that the function will determine the user group.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any[]>}              Promise resolved when the workshop submissions are retrieved.
+     * @param workshopId Workshop ID.
+     * @param userId User ID, 0 means the current user.
+     * @param groupId Group id, 0 means that the function will determine the user group.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop submissions are retrieved.
      */
     getSubmissions(workshopId: number, userId: number = 0, groupId: number = 0, offline: boolean = false,
             ignoreCache: boolean = false, siteId?: string): Promise<any[]> {
@@ -408,7 +411,8 @@ export class AddonModWorkshopProvider {
                 groupid: groupId
             };
             const preSets: any = {
-                cacheKey: this.getSubmissionsDataCacheKey(workshopId, userId, groupId)
+                cacheKey: this.getSubmissionsDataCacheKey(workshopId, userId, groupId),
+                updateFrequency: CoreSite.FREQUENCY_OFTEN
             };
 
             if (offline) {
@@ -431,11 +435,11 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop submissions data.
      *
-     * @param  {number} workshopId  Workshop ID.
-     * @param  {number} [userId=0]  User ID.
-     * @param  {number} [groupId=0] Group ID.
-     * @param  {string} [siteId]    Site ID. If not defined, current site.
-     * @return {Promise<any>}       Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param userId User ID.
+     * @param groupId Group ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateSubmissionsData(workshopId: number, userId: number = 0, groupId: number = 0, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -446,10 +450,10 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves the given submission.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the workshop submission data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop submission data is retrieved.
      */
     getSubmission(workshopId: number, submissionId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -473,10 +477,10 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop submission data.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateSubmissionData(workshopId: number, submissionId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -487,9 +491,9 @@ export class AddonModWorkshopProvider {
     /**
      * Returns the grades information for the given workshop and user.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the workshop grades data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop grades data is retrieved.
      */
     getGrades(workshopId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -507,9 +511,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop grades data.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateGradesData(workshopId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -520,14 +524,14 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves the assessment grades report.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {number}  [groupId]           Group id, 0 means that the function will determine the user group.
-     * @param  {number}  [page=0]            Page of records to return. Default 0.
-     * @param  {number}  [perPage=0]         Records per page to return. Default AddonModWorkshopProvider.PER_PAGE.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any>}                Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param groupId Group id, 0 means that the function will determine the user group.
+     * @param page Page of records to return. Default 0.
+     * @param perPage Records per page to return. Default AddonModWorkshopProvider.PER_PAGE.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getGradesReport(workshopId: number, groupId: number = 0, page: number = 0, perPage: number = 0, offline: boolean = false,
             ignoreCache: boolean = false, siteId?: string): Promise<any> {
@@ -539,7 +543,8 @@ export class AddonModWorkshopProvider {
                 perpage: perPage || AddonModWorkshopProvider.PER_PAGE
             };
             const preSets: any = {
-                cacheKey: this.getGradesReportDataCacheKey(workshopId, groupId)
+                cacheKey: this.getGradesReportDataCacheKey(workshopId, groupId),
+                updateFrequency: CoreSite.FREQUENCY_OFTEN
             };
 
             if (offline) {
@@ -562,14 +567,14 @@ export class AddonModWorkshopProvider {
     /**
      * Performs the whole fetch of the grade reports in the workshop.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {number}  [groupId=0]         Group ID.
-     * @param  {number}  [perPage=0]         Records per page to fetch. It has to match with the prefetch.
-     *                                       Default on AddonModWorkshopProvider.PER_PAGE.
-     * @param  {boolean} [forceCache=false]  True to always get the value from cache, false otherwise. Default false.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any[]>}              Promise resolved when done.
+     * @param workshopId Workshop ID.
+     * @param groupId Group ID.
+     * @param perPage Records per page to fetch. It has to match with the prefetch.
+     *                Default on AddonModWorkshopProvider.PER_PAGE.
+     * @param forceCache True to always get the value from cache, false otherwise. Default false.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when done.
      */
     fetchAllGradeReports(workshopId: number, groupId: number = 0, perPage: number = 0, forceCache: boolean = false,
             ignoreCache: boolean = false, siteId?: string): Promise<any> {
@@ -582,15 +587,15 @@ export class AddonModWorkshopProvider {
     /**
      * Recursive call on fetch all grade reports.
      *
-     * @param  {number}  workshopId  Workshop ID.
-     * @param  {number}  groupId     Group ID.
-     * @param  {number}  perPage     Records per page to fetch. It has to match with the prefetch.
-     * @param  {boolean} forceCache  True to always get the value from cache, false otherwise. Default false.
-     * @param  {boolean} ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {any[]}   grades      Grades already fetched (just to concatenate them).
-     * @param  {number}  page        Page of records to return.
-     * @param  {string}  siteId      Site ID.
-     * @return {Promise<any[]>}      Promise resolved when done.
+     * @param workshopId Workshop ID.
+     * @param groupId Group ID.
+     * @param perPage Records per page to fetch. It has to match with the prefetch.
+     * @param forceCache True to always get the value from cache, false otherwise. Default false.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param grades Grades already fetched (just to concatenate them).
+     * @param page Page of records to return.
+     * @param siteId Site ID.
+     * @return Promise resolved when done.
      */
     protected fetchGradeReportsRecursive(workshopId: number, groupId: number, perPage: number, forceCache: boolean,
             ignoreCache: boolean, grades: any[], page: number, siteId: string): Promise<any[]> {
@@ -610,10 +615,10 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop grade report data.
      *
-     * @param  {number} workshopId  Workshop ID.
-     * @param  {number} [groupId=0] Group ID.
-     * @param  {string} [siteId]    Site ID. If not defined, current site.
-     * @return {Promise<any>}       Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param groupId Group ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateGradeReportData(workshopId: number, groupId: number = 0, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -624,12 +629,12 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves the given submission assessment.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {number}  submissionId        Submission ID.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any[]>}              Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getSubmissionAssessments(workshopId: number, submissionId: number, offline: boolean = false, ignoreCache: boolean = false,
             siteId?: string): Promise<any[]> {
@@ -661,10 +666,10 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop submission assessments data.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateSubmissionAssesmentsData(workshopId: number, submissionId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -675,15 +680,15 @@ export class AddonModWorkshopProvider {
     /**
      * Add a new submission to a given workshop.
      *
-     * @param  {number}  workshopId           Workshop ID.
-     * @param  {number}  courseId             Course ID the workshop belongs to.
-     * @param  {string}  title                The submission title.
-     * @param  {string}  content              The submission text content.
-     * @param  {number}  [attachmentsId]      The draft file area id for attachments.
-     * @param  {string}  [siteId]             Site ID. If not defined, current site.
-     * @param  {number}  [timecreated]        The time the submission was created. Only used when editing an offline discussion.
-     * @param  {boolean} [allowOffline=false] True if it can be stored in offline, false otherwise.
-     * @return {Promise<any>}                 Promise resolved with submission ID if sent online or false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param courseId Course ID the workshop belongs to.
+     * @param title The submission title.
+     * @param content The submission text content.
+     * @param attachmentsId The draft file area id for attachments.
+     * @param siteId Site ID. If not defined, current site.
+     * @param timecreated The time the submission was created. Only used when editing an offline discussion.
+     * @param allowOffline True if it can be stored in offline, false otherwise.
+     * @return Promise resolved with submission ID if sent online or false if stored offline.
      */
     addSubmission(workshopId: number, courseId: number, title: string, content: string, attachmentsId?: number, siteId?: string,
             timecreated?: number, allowOffline: boolean = false): Promise<any> {
@@ -722,12 +727,12 @@ export class AddonModWorkshopProvider {
     /**
      * Add a new submission to a given workshop. It will fail if offline or cannot connect.
      *
-     * @param  {number} workshopId      Workshop ID.
-     * @param  {string} title           The submission title.
-     * @param  {string} content         The submission text content.
-     * @param  {number} [attachmentsId] The draft file area id for attachments.
-     * @param  {string} [siteId]        Site ID. If not defined, current site.
-     * @return {Promise<any>}           Promise resolved when the submission is created.
+     * @param workshopId Workshop ID.
+     * @param title The submission title.
+     * @param content The submission text content.
+     * @param attachmentsId The draft file area id for attachments.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the submission is created.
      */
     addSubmissionOnline(workshopId: number, title: string, content: string, attachmentsId: number, siteId?: string):
             Promise<any> {
@@ -753,15 +758,15 @@ export class AddonModWorkshopProvider {
     /**
      * Updates the given submission.
      *
-     * @param  {number}  workshopId           Workshop ID.
-     * @param  {number}  submissionId         Submission ID.
-     * @param  {number}  courseId             Course ID the workshop belongs to.
-     * @param  {string}  title                The submission title.
-     * @param  {string}  content              The submission text content.
-     * @param  {number}  [attachmentsId]      The draft file area id for attachments.
-     * @param  {string}  [siteId]             Site ID. If not defined, current site.
-     * @param  {boolean} [allowOffline=false] True if it can be stored in offline, false otherwise.
-     * @return {Promise<any>}                 Promise resolved with submission ID if sent online or false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param courseId Course ID the workshop belongs to.
+     * @param title The submission title.
+     * @param content The submission text content.
+     * @param attachmentsId The draft file area id for attachments.
+     * @param siteId Site ID. If not defined, current site.
+     * @param allowOffline True if it can be stored in offline, false otherwise.
+     * @return Promise resolved with submission ID if sent online or false if stored offline.
      */
     updateSubmission(workshopId: number, submissionId: number, courseId: number, title: string, content: string,
             attachmentsId?: number, siteId?: string, allowOffline: boolean = false): Promise<any> {
@@ -797,12 +802,12 @@ export class AddonModWorkshopProvider {
     /**
      * Updates the given submission. It will fail if offline or cannot connect.
      *
-     * @param  {number} submissionId    Submission ID.
-     * @param  {string} title           The submission title.
-     * @param  {string} content         The submission text content.
-     * @param  {number} [attachmentsId] The draft file area id for attachments.
-     * @param  {string} [siteId]        Site ID. If not defined, current site.
-     * @return {Promise<any>}           Promise resolved when the submission is updated.
+     * @param submissionId Submission ID.
+     * @param title The submission title.
+     * @param content The submission text content.
+     * @param attachmentsId The draft file area id for attachments.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the submission is updated.
      */
     updateSubmissionOnline(submissionId: number, title: string, content: string, attachmentsId?: number, siteId?: string):
             Promise<any> {
@@ -829,11 +834,11 @@ export class AddonModWorkshopProvider {
     /**
      * Deletes the given submission.
      *
-     * @param  {number}  workshopId  Workshop ID.
-     * @param  {number} submissionId Submission ID.
-     * @param  {number} courseId     Course ID the workshop belongs to.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved with submission ID if sent online, resolved with false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param submissionId Submission ID.
+     * @param courseId Course ID the workshop belongs to.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved with submission ID if sent online, resolved with false if stored offline.
      */
     deleteSubmission(workshopId: number, submissionId: number, courseId: number, siteId?: string): Promise<any> {
         siteId = siteId || this.sitesProvider.getCurrentSiteId();
@@ -867,9 +872,9 @@ export class AddonModWorkshopProvider {
     /**
      * Deletes the given submission. It will fail if offline or cannot connect.
      *
-     * @param  {number} submissionId Submission ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the submission is deleted.
+     * @param submissionId Submission ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the submission is deleted.
      */
     deleteSubmissionOnline(submissionId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -892,12 +897,12 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves all the assessments reviewed by the given user.
      *
-     * @param  {number}  workshopId          Workshop ID.
-     * @param  {number}  [userId]            User ID. If not defined, current user.
-     * @param  {boolean} [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean} [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}  [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any[]>}              Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param userId User ID. If not defined, current user.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getReviewerAssessments(workshopId: number, userId?: number, offline: boolean = false, ignoreCache: boolean = false,
             siteId?: string): Promise<any[]> {
@@ -933,10 +938,10 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop user assessments data.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {number} [userId]   User ID. If not defined, current user.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param userId User ID. If not defined, current user.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateReviewerAssesmentsData(workshopId: number, userId?: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -947,10 +952,10 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves the given assessment.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} assessmentId Assessment ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getAssessment(workshopId: number, assessmentId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -974,10 +979,10 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop assessment data.
      *
-     * @param  {number} workshopId   Workshop ID.
-     * @param  {number} assessmentId Assessment ID.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateAssessmentData(workshopId: number, assessmentId: number, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -988,13 +993,13 @@ export class AddonModWorkshopProvider {
     /**
      * Retrieves the assessment form definition (data required to be able to display the assessment form).
      *
-     * @param  {number}    workshopId          Workshop ID.
-     * @param  {number}    assessmentId        Assessment ID.
-     * @param  {string}    [mode='assessment'] Mode assessment (default) or preview.
-     * @param  {boolean}   [offline=false]     True if it should return cached data. Has priority over ignoreCache.
-     * @param  {boolean}   [ignoreCache=false] True if it should ignore cached data (it will always fail in offline or server down).
-     * @param  {string}    [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any>}                  Promise resolved when the workshop data is retrieved.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param mode Mode assessment (default) or preview.
+     * @param offline True if it should return cached data. Has priority over ignoreCache.
+     * @param ignoreCache True if it should ignore cached data (it will always fail in offline or server down).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the workshop data is retrieved.
      */
     getAssessmentForm(workshopId: number, assessmentId: number, mode: string = 'assessment', offline: boolean = false,
             ignoreCache: boolean = false, siteId?: string): Promise<any> {
@@ -1004,7 +1009,8 @@ export class AddonModWorkshopProvider {
                 mode: mode || 'assessment'
             };
             const preSets: any = {
-                cacheKey: this.getAssessmentFormDataCacheKey(workshopId, assessmentId, mode)
+                cacheKey: this.getAssessmentFormDataCacheKey(workshopId, assessmentId, mode),
+                updateFrequency: CoreSite.FREQUENCY_RARELY
             };
 
             if (offline) {
@@ -1031,8 +1037,8 @@ export class AddonModWorkshopProvider {
     /**
      * Parse fieldes into a more handful format.
      *
-     * @param  {any[]} fields Fields to parse
-     * @return {any[]}        Parsed fields
+     * @param fields Fields to parse
+     * @return Parsed fields
      */
     parseFields(fields: any[]): any[] {
         const parsedFields = [];
@@ -1072,11 +1078,11 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidates workshop assessments form data.
      *
-     * @param  {number} workshopId          Workshop ID.
-     * @param  {number} assessmentId        Assessment ID.
-     * @param  {string} [mode='assessment'] Mode assessment (default) or preview.
-     * @param  {string} [siteId]            Site ID. If not defined, current site.
-     * @return {Promise<any>}               Promise resolved when the data is invalidated.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param mode Mode assessment (default) or preview.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the data is invalidated.
      */
     invalidateAssessmentFormData(workshopId: number, assessmentId: number, mode: string = 'assessment', siteId?: string):
             Promise<any> {
@@ -1088,14 +1094,14 @@ export class AddonModWorkshopProvider {
     /**
      * Updates the given assessment.
      *
-     * @param {number}  workshopId           Workshop ID.
-     * @param {number}  assessmentId         Assessment ID.
-     * @param {number}  courseId             Course ID the workshop belongs to.
-     * @param {any}     inputData            Assessment data.
-     * @param {string}  [siteId]             Site ID. If not defined, current site.
-     * @param {boolean} [allowOffline=false] True if it can be stored in offline, false otherwise.
-     * @return {Promise<any>}                Promise resolved with the grade of the submission if sent online,
-     *                                       resolved with false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param assessmentId Assessment ID.
+     * @param courseId Course ID the workshop belongs to.
+     * @param inputData Assessment data.
+     * @param siteId Site ID. If not defined, current site.
+     * @param allowOffline True if it can be stored in offline, false otherwise.
+     * @return Promise resolved with the grade of the submission if sent online,
+     *         resolved with false if stored offline.
      */
     updateAssessment(workshopId: number, assessmentId: number, courseId: number, inputData: any, siteId?: any,
             allowOffline: boolean = false): Promise<any> {
@@ -1130,10 +1136,10 @@ export class AddonModWorkshopProvider {
     /**
      * Updates the given assessment. It will fail if offline or cannot connect.
      *
-     * @param  {number} assessmentId Assessment ID.
-     * @param  {any}    inputData    Assessment data.
-     * @param  {string} [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}        Promise resolved with the grade of the submission.
+     * @param assessmentId Assessment ID.
+     * @param inputData Assessment data.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved with the grade of the submission.
      */
     updateAssessmentOnline(assessmentId: number, inputData: any, siteId?: string): Promise<any> {
         return this.sitesProvider.getSite(siteId).then((site) => {
@@ -1157,15 +1163,15 @@ export class AddonModWorkshopProvider {
     /**
      * Evaluates a submission (used by teachers for provide feedback or override the submission grade).
      *
-     * @param  {number}  workshopId   Workshop ID.
-     * @param  {number}  submissionId The submission id.
-     * @param  {number}  courseId     Course ID the workshop belongs to.
-     * @param  {string}  feedbackText The feedback for the author.
-     * @param  {boolean} published    Whether to publish the submission for other users.
-     * @param  {any}     gradeOver    The new submission grade (empty for no overriding the grade).
-     * @param  {string}  [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}         Promise resolved when submission is evaluated if sent online,
-     *                                resolved with false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param submissionId The submission id.
+     * @param courseId Course ID the workshop belongs to.
+     * @param feedbackText The feedback for the author.
+     * @param published Whether to publish the submission for other users.
+     * @param gradeOver The new submission grade (empty for no overriding the grade).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when submission is evaluated if sent online,
+     *         resolved with false if stored offline.
      */
     evaluateSubmission(workshopId: number, submissionId: number, courseId: number, feedbackText: string, published: boolean,
             gradeOver: any, siteId?: string): Promise<any> {
@@ -1202,12 +1208,12 @@ export class AddonModWorkshopProvider {
      * Evaluates a submission (used by teachers for provide feedback or override the submission grade).
      * It will fail if offline or cannot connect.
      *
-     * @param  {number}  submissionId The submission id.
-     * @param  {string}  feedbackText The feedback for the author.
-     * @param  {boolean} published    Whether to publish the submission for other users.
-     * @param  {any}     gradeOver    The new submission grade (empty for no overriding the grade).
-     * @param  {string}  [siteId]     Site ID. If not defined, current site.
-     * @return {Promise<any>}         Promise resolved when the submission is evaluated.
+     * @param submissionId The submission id.
+     * @param feedbackText The feedback for the author.
+     * @param published Whether to publish the submission for other users.
+     * @param gradeOver The new submission grade (empty for no overriding the grade).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the submission is evaluated.
      */
     evaluateSubmissionOnline(submissionId: number, feedbackText: string, published: boolean, gradeOver: any,
             siteId?: string): Promise<any> {
@@ -1235,15 +1241,15 @@ export class AddonModWorkshopProvider {
     /**
      * Evaluates an assessment (used by teachers for provide feedback to the reviewer).
      *
-     * @param  {number}  workshopId       Workshop ID.
-     * @param  {number}  assessmentId     The assessment id.
-     * @param  {number}  courseId         Course ID the workshop belongs to.
-     * @param  {string}  feedbackText     The feedback for the reviewer.
-     * @param  {boolean} weight           The new weight for the assessment.
-     * @param  {any}     gradingGradeOver The new grading grade (empty for no overriding the grade).
-     * @param  {string}  [siteId]         Site ID. If not defined, current site.
-     * @return {Promise<any>}             Promise resolved when assessment is evaluated if sent online,
-     *                                    resolved with false if stored offline.
+     * @param workshopId Workshop ID.
+     * @param assessmentId The assessment id.
+     * @param courseId Course ID the workshop belongs to.
+     * @param feedbackText The feedback for the reviewer.
+     * @param weight The new weight for the assessment.
+     * @param gradingGradeOver The new grading grade (empty for no overriding the grade).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when assessment is evaluated if sent online,
+     *         resolved with false if stored offline.
      */
     evaluateAssessment(workshopId: number, assessmentId: number, courseId: number, feedbackText: string, weight: number,
             gradingGradeOver: any, siteId?: string): Promise<any> {
@@ -1279,12 +1285,12 @@ export class AddonModWorkshopProvider {
     /**
      * Evaluates an assessment (used by teachers for provide feedback to the reviewer). It will fail if offline or cannot connect.
      *
-     * @param  {number}  assessmentId     The assessment id.
-     * @param  {string}  feedbackText     The feedback for the reviewer.
-     * @param  {number}  weight           The new weight for the assessment.
-     * @param  {any}     gradingGradeOver The new grading grade (empty for no overriding the grade).
-     * @param  {string}  [siteId]         Site ID. If not defined, current site.
-     * @return {Promise<any>}             Promise resolved when the assessment is evaluated.
+     * @param assessmentId The assessment id.
+     * @param feedbackText The feedback for the reviewer.
+     * @param weight The new weight for the assessment.
+     * @param gradingGradeOver The new grading grade (empty for no overriding the grade).
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the assessment is evaluated.
      */
     evaluateAssessmentOnline(assessmentId: number, feedbackText: string, weight: number, gradingGradeOver: any, siteId?: string):
             Promise<any> {
@@ -1313,10 +1319,10 @@ export class AddonModWorkshopProvider {
      * Invalidate the prefetched content except files.
      * To invalidate files, use AddonModWorkshopProvider#invalidateFiles.
      *
-     * @param  {number} moduleId The module ID.
-     * @param  {number} courseId Course ID.
-     * @param  {string} [siteId] Site ID. If not defined, current site.
-     * @return {Promise<any>}    Promised resolved when content is invalidated.
+     * @param moduleId The module ID.
+     * @param courseId Course ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promised resolved when content is invalidated.
      */
     invalidateContent(moduleId: number, courseId: number, siteId?: string): Promise<any> {
         siteId = siteId || this.sitesProvider.getCurrentSiteId();
@@ -1330,10 +1336,10 @@ export class AddonModWorkshopProvider {
      * Invalidate the prefetched content except files using the activityId.
      * To invalidate files, use AdddonModWorkshop#invalidateFiles.
      *
-     * @param  {number} workshopId Workshop ID.
-     * @param  {number} courseId   Course ID.
-     * @param  {string} [siteId]   Site ID. If not defined, current site.
-     * @return {Promise<any>}      Promise resolved when content is invalidated.
+     * @param workshopId Workshop ID.
+     * @param courseId Course ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when content is invalidated.
      */
     invalidateContentById(workshopId: number, courseId: number, siteId?: string): Promise<any> {
         siteId = siteId || this.sitesProvider.getCurrentSiteId();
@@ -1350,9 +1356,9 @@ export class AddonModWorkshopProvider {
     /**
      * Invalidate the prefetched files.
      *
-     * @param  {number} moduleId The module ID.
-     * @param  {string} [siteId] Site ID. If not defined, current site.
-     * @return {Promise<any>}    Promise resolved when the files are invalidated.
+     * @param moduleId The module ID.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the files are invalidated.
      */
     invalidateFiles(moduleId: number, siteId?: string): Promise<any> {
         return this.filepoolProvider.invalidateFilesByComponent(siteId, AddonModWorkshopProvider.COMPONENT, moduleId);
@@ -1361,31 +1367,35 @@ export class AddonModWorkshopProvider {
     /**
      * Report the workshop as being viewed.
      *
-     * @param  {number} id       Workshop ID.
-     * @param  {string} [siteId] Site ID. If not defined, current site.
-     * @return {Promise<any>}    Promise resolved when the WS call is successful.
+     * @param id Workshop ID.
+     * @param name Name of the workshop.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the WS call is successful.
      */
-    logView(id: number, siteId?: string): Promise<any> {
+    logView(id: number, name?: string, siteId?: string): Promise<any> {
         const params = {
             workshopid: id
         };
 
-        return this.logHelper.log('mod_workshop_view_workshop', params, AddonModWorkshopProvider.COMPONENT, id, siteId);
+        return this.logHelper.logSingle('mod_workshop_view_workshop', params, AddonModWorkshopProvider.COMPONENT, id, name,
+                'workshop', siteId);
     }
 
     /**
      * Report the workshop submission as being viewed.
      *
-     * @param  {number} id          Submission ID.
-     * @param  {number} workshopId  Workshop ID.
-     * @param  {string} [siteId] Site ID. If not defined, current site.
-     * @return {Promise<any>}    Promise resolved when the WS call is successful.
+     * @param id Submission ID.
+     * @param workshopId Workshop ID.
+     * @param name Name of the workshop.
+     * @param siteId Site ID. If not defined, current site.
+     * @return Promise resolved when the WS call is successful.
      */
-    logViewSubmission(id: number, workshopId: number, siteId?: string): Promise<any> {
+    logViewSubmission(id: number, workshopId: number, name?: string, siteId?: string): Promise<any> {
         const params = {
             submissionid: id
         };
 
-        return this.logHelper.log('mod_workshop_view_submission', params, AddonModWorkshopProvider.COMPONENT, workshopId, siteId);
+        return this.logHelper.logSingle('mod_workshop_view_submission', params, AddonModWorkshopProvider.COMPONENT, workshopId,
+                name, 'workshop', params, siteId);
     }
 }

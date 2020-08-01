@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import { AddonModGlossaryProvider } from './glossary';
 export class AddonModGlossaryEntryLinkHandler extends CoreContentLinksHandlerBase {
     name = 'AddonModGlossaryEntryLinkHandler';
     featureName = 'CoreCourseModuleDelegate_AddonModGlossary';
-    pattern = /\/mod\/glossary\/showentry\.php.*([\&\?]eid=\d+)/;
+    pattern = /\/mod\/glossary\/(showentry|view)\.php.*([\&\?](eid|g|mode|hook)=\d+)/;
 
     constructor(
             private domUtils: CoreDomUtilsProvider,
@@ -40,18 +40,24 @@ export class AddonModGlossaryEntryLinkHandler extends CoreContentLinksHandlerBas
     /**
      * Get the list of actions for a link (url).
      *
-     * @param {string[]} siteIds List of sites the URL belongs to.
-     * @param {string} url The URL to treat.
-     * @param {any} params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
-     * @param {number} [courseId] Course ID related to the URL. Optional but recommended.
-     * @return {CoreContentLinksAction[]|Promise<CoreContentLinksAction[]>} List of (or promise resolved with list of) actions.
+     * @param siteIds List of sites the URL belongs to.
+     * @param url The URL to treat.
+     * @param params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
+     * @param courseId Course ID related to the URL. Optional but recommended.
+     * @return List of (or promise resolved with list of) actions.
      */
     getActions(siteIds: string[], url: string, params: any, courseId?: number):
             CoreContentLinksAction[] | Promise<CoreContentLinksAction[]> {
         return [{
             action: (siteId, navCtrl?): void => {
                 const modal = this.domUtils.showModalLoading();
-                const entryId = parseInt(params.eid, 10);
+                let entryId;
+                if (params.mode == 'entry') {
+                    entryId = parseInt(params.hook, 10);
+                } else {
+                    entryId = parseInt(params.eid, 10);
+                }
+
                 let promise;
 
                 if (courseId) {

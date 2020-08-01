@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import { AddonModDataOfflineProvider } from '../../providers/offline';
 import { CoreSitesProvider } from '@providers/sites';
 import { CoreContentLinksHelperProvider } from '@core/contentlinks/providers/helper';
 import { CoreUserProvider } from '@core/user/providers/user';
+import { CoreTagProvider } from '@core/tag/providers/tag';
 
 /**
  * Component that displays a database action.
@@ -41,13 +42,16 @@ export class AddonModDataActionComponent implements OnInit {
     rootUrl: string;
     url: string;
     userPicture: string;
+    tagsEnabled: boolean;
 
     constructor(protected injector: Injector, protected dataProvider: AddonModDataProvider,
             protected dataOffline: AddonModDataOfflineProvider, protected eventsProvider: CoreEventsProvider,
             sitesProvider: CoreSitesProvider, protected userProvider: CoreUserProvider, private navCtrl: NavController,
-            protected linkHelper: CoreContentLinksHelperProvider, private dataHelper: AddonModDataHelperProvider) {
+            protected linkHelper: CoreContentLinksHelperProvider, private dataHelper: AddonModDataHelperProvider,
+            private tagProvider: CoreTagProvider) {
         this.rootUrl = sitesProvider.getCurrentSite().getURL();
         this.siteId = sitesProvider.getCurrentSiteId();
+        this.tagsEnabled = this.tagProvider.areTagsAvailableInSite();
     }
 
     /**
@@ -113,7 +117,7 @@ export class AddonModDataActionComponent implements OnInit {
     /**
      * Undo delete action.
      *
-     * @return {Promise<any>} Solved when done.
+     * @return Solved when done.
      */
     undoDelete(): Promise<any> {
         const dataId = this.database.id,

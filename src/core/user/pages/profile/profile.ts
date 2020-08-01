@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ export class CoreUserProfilePage {
     user: any;
     title: string;
     isDeleted = false;
+    isEnrolled = true;
     canChangeProfilePicture = false;
     actionHandlers: CoreUserProfileHandlerData[] = [];
     newPageHandlers: CoreUserProfileHandlerData[] = [];
@@ -83,8 +84,9 @@ export class CoreUserProfilePage {
      */
     ionViewDidLoad(): void {
         this.fetchUser().then(() => {
-            return this.userProvider.logView(this.userId, this.courseId).catch((error) => {
+            return this.userProvider.logView(this.userId, this.courseId, this.user.fullname).catch((error) => {
                 this.isDeleted = error.errorcode === 'userdeleted';
+                this.isEnrolled = error.errorcode !== 'notenrolledprofile';
             });
         }).finally(() => {
             this.userLoaded = true;
@@ -190,7 +192,7 @@ export class CoreUserProfilePage {
     /**
      * Refresh the user.
      *
-     * @param {any} refresher Refresher.
+     * @param refresher Refresher.
      */
     refreshUser(refresher?: any): void {
         const promises = [];
@@ -223,8 +225,8 @@ export class CoreUserProfilePage {
     /**
      * A handler was clicked.
      *
-     * @param {Event} event Click event.
-     * @param {CoreUserProfileHandlerData} handler Handler that was clicked.
+     * @param event Click event.
+     * @param handler Handler that was clicked.
      */
     handlerClicked(event: Event, handler: CoreUserProfileHandlerData): void {
         // Decide which navCtrl to use. If this page is inside a split view, use the split view's master nav.

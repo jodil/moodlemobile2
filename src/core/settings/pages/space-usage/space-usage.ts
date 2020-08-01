@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
 import { Component, } from '@angular/core';
 import { IonicPage } from 'ionic-angular';
 import { TranslateService } from '@ngx-translate/core';
-import { CoreAppProvider } from '@providers/app';
-import { CoreFilepoolProvider } from '@providers/filepool';
-import { CoreSitesProvider } from '@providers/sites';
-import { CoreTextUtilsProvider } from '@providers/utils/text';
+import { CoreSitesProvider, CoreSiteBasicInfo } from '@providers/sites';
 import { CoreDomUtilsProvider } from '@providers/utils/dom';
+import { CoreSettingsHelper, CoreSiteSpaceUsage } from '../../providers/helper';
 
 /**
  * Page that displays the space usage settings.
@@ -31,14 +29,19 @@ import { CoreDomUtilsProvider } from '@providers/utils/dom';
 })
 export class CoreSettingsSpaceUsagePage {
 
-    usageLoaded = false;
+    loaded = false;
     sites = [];
     currentSiteId = '';
-    totalUsage = 0;
+    totals: CoreSiteSpaceUsage = {
+        cacheEntries: 0,
+        spaceUsage: 0
+    };
 
-    constructor(private filePoolProvider: CoreFilepoolProvider,
-            private sitesProvider: CoreSitesProvider, private textUtils: CoreTextUtilsProvider,
-            private translate: TranslateService, private domUtils: CoreDomUtilsProvider, appProvider: CoreAppProvider) {
+    constructor(protected sitesProvider: CoreSitesProvider,
+            protected settingsHelper: CoreSettingsHelper,
+            protected domUtils: CoreDomUtilsProvider,
+            protected translate: TranslateService,
+    ) {
         this.currentSiteId = this.sitesProvider.getCurrentSiteId();
     }
 
@@ -46,115 +49,78 @@ export class CoreSettingsSpaceUsagePage {
      * View loaded.
      */
     ionViewDidLoad(): void {
-        this.fetchData().finally(() => {
-            this.usageLoaded = true;
+        this.loadSiteData().finally(() => {
+            this.loaded = true;
         });
     }
 
     /**
-     * Convenience function to calculate each site's usage, and the total usage.
+     * Convenience function to load site data/usage and calculate the totals.
      *
-     * @return {Promise<any>} Resolved when done.
+     * @return Resolved when done.
      */
-    protected calculateSizeUsage(): Promise<any> {
-        return this.sitesProvider.getSortedSites().then((sites) => {
-            this.sites = sites;
+    protected async loadSiteData(): Promise<void> {
+        // Calculate total usage.
+        let totalSize = 0;
+        let totalEntries = 0;
 
-            // Get space usage.
-            const promises = this.sites.map((siteEntry) => {
-                return this.sitesProvider.getSite(siteEntry.id).then((site) => {
-                    return site.getSpaceUsage().then((size) => {
-                        siteEntry.spaceUsage = size;
-                    });
-                });
-            });
+        this.sites = await this.sitesProvider.getSortedSites();
 
-            return Promise.all(promises);
-        });
-    }
+        // Get space usage.
+        await Promise.all(this.sites.map(async (site) => {
+            const siteInfo = await this.settingsHelper.getSiteSpaceUsage(site.id);
 
-    /**
-     * Convenience function to calculate total usage.
-     */
-    protected calculateTotalUsage(): void {
-        let total = 0;
-        this.sites.forEach((site) => {
-            if (site.spaceUsage) {
-                total += parseInt(site.spaceUsage, 10);
-            }
-        });
-        this.totalUsage = total;
-    }
+            site.cacheEntries = siteInfo.cacheEntries;
+            site.spaceUsage = siteInfo.spaceUsage;
 
-    /**
-     * Convenience function to calculate space usage.
-     *
-     * @return {Promise<any>} Resolved when done.
-     */
-    protected fetchData(): Promise<any> {
-        const promises = [
-            this.calculateSizeUsage().then(() => this.calculateTotalUsage()),
-        ];
+            totalSize += (site.spaceUsage ? parseInt(site.spaceUsage, 10) : 0);
+            totalEntries += (site.cacheEntries ? parseInt(site.cacheEntries, 10) : 0);
+        }));
 
-        return Promise.all(promises);
+        this.totals.spaceUsage = totalSize;
+        this.totals.cacheEntries = totalEntries;
     }
 
     /**
      * Refresh the data.
      *
-     * @param {any} refresher Refresher.
+     * @param refresher Refresher.
      */
     refreshData(refresher: any): void {
-        this.fetchData().finally(() => {
+        this.loadSiteData().finally(() => {
             refresher.complete();
         });
     }
 
     /**
-     * Convenience function to update site size, along with total usage.
+     * Deletes files of a site and the tables that can be cleared.
      *
-     * @param {any} site Site object with space usage.
-     * @param {number} newUsage New space usage of the site in bytes.
+     * @param siteData Site object with space usage.
      */
-    protected updateSiteUsage(site: any, newUsage: number): void {
-        const oldUsage = site.spaceUsage;
-        site.spaceUsage = newUsage;
-        this.totalUsage -= oldUsage - newUsage;
+    deleteSiteStorage(siteData: CoreSiteBasicInfoWithUsage): void {
+        this.settingsHelper.deleteSiteStorage(siteData.siteName, siteData.id).then((newInfo) => {
+            this.totals.spaceUsage -= siteData.spaceUsage - newInfo.spaceUsage;
+            this.totals.spaceUsage -= siteData.cacheEntries - newInfo.cacheEntries;
+            siteData.spaceUsage = newInfo.spaceUsage;
+            siteData.cacheEntries = newInfo.cacheEntries;
+        }).catch(() => {
+            // Ignore cancelled confirmation modal.
+        });
     }
 
     /**
-     * Deletes files of a site.
-     *
-     * @param {any} siteData Site object with space usage.
+     * Show information about space usage actions.
      */
-    deleteSiteFiles(siteData: any): void {
-        this.textUtils.formatText(siteData.siteName).then((siteName) => {
-            const title = this.translate.instant('core.settings.deletesitefilestitle');
-            const message = this.translate.instant('core.settings.deletesitefiles', {sitename: siteName});
-
-            this.domUtils.showConfirm(message, title).then(() => {
-                return this.sitesProvider.getSite(siteData.id);
-            }).then((site) => {
-                site.deleteFolder().then(() => {
-                    this.filePoolProvider.clearAllPackagesStatus(site.id);
-                    this.filePoolProvider.clearFilepool(site.id);
-                    this.updateSiteUsage(siteData, 0);
-                }).catch((error) => {
-                    if (error && error.code === FileError.NOT_FOUND_ERR) {
-                        // Not found, set size 0.
-                        this.filePoolProvider.clearAllPackagesStatus(site.id);
-                        this.updateSiteUsage(siteData, 0);
-                    } else {
-                        // Error, recalculate the site usage.
-                        this.domUtils.showErrorModal('core.settings.errordeletesitefiles', true);
-                        site.getSpaceUsage().then((size) => {
-                            this.updateSiteUsage(siteData, size);
-                        });
-                    }
-                });
-            }).catch(() => {
-                // Ignore cancelled confirmation modal.
-            });
-        });
+    showInfo(): void {
+        this.domUtils.showAlert(this.translate.instant('core.help'),
+            this.translate.instant('core.settings.spaceusagehelp'));
     }
+}
+
+/**
+ * Basic site info with space usage and cache entries that can be erased.
+ */
+export interface CoreSiteBasicInfoWithUsage extends CoreSiteBasicInfo {
+    cacheEntries?: number; // Number of cached entries that can be cleared.
+    spaceUsage?: number; // Space used in this site.
 }

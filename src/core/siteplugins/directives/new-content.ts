@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ export class CoreSitePluginsNewContentDirective implements OnInit {
     @Input() args: any; // The params to get the new content.
     @Input() title: string; // The title to display with the new content. Only if samePage=false.
     @Input() samePage: boolean | string; // Whether to display the content in same page or open a new one. Defaults to new page.
-    @Input() useOtherData: any[]; // Whether to include other data in the args. @see CoreSitePluginsProvider.loadOtherDataInArgs.
+    @Input() useOtherData: any; // Whether to include other data in the args. @see CoreSitePluginsProvider.loadOtherDataInArgs.
     @Input() form: string; // ID or name to identify a form. The form will be obtained from document.forms.
                            // If supplied and form is found, the form data will be retrieved and sent to the new content.
     @Input() jsData: any; // JS variables to pass to the new page so they can be used in the template or JS.
@@ -84,7 +84,7 @@ export class CoreSitePluginsNewContentDirective implements OnInit {
             if (this.utils.isTrueOrOne(this.samePage)) {
                 // Update the parent content (if it exists).
                 if (this.parentContent) {
-                    this.parentContent.updateContent(args, this.component, this.method, this.jsData);
+                    this.parentContent.updateContent(args, this.component, this.method, this.jsData, this.preSets);
                 }
             } else {
                 let jsData = this.jsData;
@@ -93,7 +93,7 @@ export class CoreSitePluginsNewContentDirective implements OnInit {
                 }
 
                 this.navCtrl.push('CoreSitePluginsPluginPage', {
-                    title: this.title,
+                    title: this.title || (this.parentContent && this.parentContent.pageTitle),
                     component: this.component || (this.parentContent && this.parentContent.component),
                     method: this.method || (this.parentContent && this.parentContent.method),
                     args: args,

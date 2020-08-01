@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,14 @@ import { TranslateService } from '@ngx-translate/core';
 import { CoreSitesProvider } from '@providers/sites';
 import { CoreDomUtilsProvider } from '@providers/utils/dom';
 import { CoreSplitViewComponent } from '@components/split-view/split-view';
-import { AddonCompetencyProvider } from '../../providers/competency';
+import {
+    AddonCompetencyProvider, AddonCompetencyUserCompetencySummary, AddonCompetencyUserCompetencySummaryInPlan,
+    AddonCompetencyUserCompetencySummaryInCourse, AddonCompetencyUserCompetencyPlan,
+    AddonCompetencyUserCompetency, AddonCompetencyUserCompetencyCourse
+} from '../../providers/competency';
 import { AddonCompetencyHelperProvider } from '../../providers/helper';
+import { CoreUserSummary } from '@core/user/providers/user';
+import { CoreCourseModuleSummary } from '@core/course/providers/course';
 
 /**
  * Page that displays a learning plan.
@@ -36,9 +42,12 @@ export class AddonCompetencyCompetencyPage {
     courseId: number;
     userId: number;
     planStatus: number;
-    coursemodules: any;
-    user: any;
-    competency: any;
+    coursemodules: CoreCourseModuleSummary[];
+    user: CoreUserSummary;
+    competency: AddonCompetencyUserCompetencySummary;
+    userCompetency: AddonCompetencyUserCompetencyPlan | AddonCompetencyUserCompetency | AddonCompetencyUserCompetencyCourse;
+    contextLevel: string;
+    contextInstanceId: number;
 
     constructor(private navCtrl: NavController, navParams: NavParams, private translate: TranslateService,
             private sitesProvider: CoreSitesProvider, private domUtils: CoreDomUtilsProvider,
@@ -55,13 +64,16 @@ export class AddonCompetencyCompetencyPage {
      */
     ionViewDidLoad(): void {
         this.fetchCompetency().then(() => {
+            const name = this.competency && this.competency.competency && this.competency.competency.competency &&
+                    this.competency.competency.competency.shortname;
+
             if (this.planId) {
-                this.competencyProvider.logCompetencyInPlanView(this.planId, this.competencyId, this.planStatus, this.userId)
-                        .catch(() => {
+                this.competencyProvider.logCompetencyInPlanView(this.planId, this.competencyId, this.planStatus, name,
+                        this.userId).catch(() => {
                     // Ignore errors.
                 });
             } else {
-                this.competencyProvider.logCompetencyInCourseView(this.courseId, this.competencyId, this.userId).catch(() => {
+                this.competencyProvider.logCompetencyInCourseView(this.courseId, this.competencyId, name, this.userId).catch(() => {
                     // Ignore errors.
                 });
             }
@@ -73,10 +85,11 @@ export class AddonCompetencyCompetencyPage {
     /**
      * Fetches the competency and updates the view.
      *
-     * @return {Promise<void>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fetchCompetency(): Promise<void> {
-        let promise;
+        let promise: Promise<AddonCompetencyUserCompetencySummaryInPlan | AddonCompetencyUserCompetencySummaryInCourse>;
+
         if (this.planId) {
             this.planStatus = null;
             promise = this.competencyProvider.getCompetencyInPlan(this.planId, this.competencyId);
@@ -87,23 +100,30 @@ export class AddonCompetencyCompetencyPage {
         }
 
         return promise.then((competency) => {
-            competency.usercompetencysummary.usercompetency = competency.usercompetencysummary.usercompetencyplan ||
-                competency.usercompetencysummary.usercompetency;
+
+            // Calculate the context.
+            if (this.courseId) {
+                this.contextLevel = 'course';
+                this.contextInstanceId = this.courseId;
+            } else {
+                this.contextLevel = 'user';
+                this.contextInstanceId = this.userId || competency.usercompetencysummary.user.id;
+            }
+
             this.competency = competency.usercompetencysummary;
+            this.userCompetency = this.competency.usercompetencyplan || this.competency.usercompetency;
 
             if (this.planId) {
-                this.planStatus = competency.plan.status;
+                this.planStatus = (<AddonCompetencyUserCompetencySummaryInPlan> competency).plan.status;
                 this.competency.usercompetency.statusname =
                     this.competencyHelperProvider.getCompetencyStatusName(this.competency.usercompetency.status);
             } else {
-                this.competency.usercompetency = this.competency.usercompetencycourse;
-                this.coursemodules = competency.coursemodules;
+                this.userCompetency = this.competency.usercompetencycourse;
+                this.coursemodules = (<AddonCompetencyUserCompetencySummaryInCourse> competency).coursemodules;
             }
 
             if (this.competency.user.id != this.sitesProvider.getCurrentSiteUserId()) {
-                this.competency.user.profileimageurl = this.competency.user.profileimageurl || true;
-
-                // Get the user profile image from the returned object.
+                // Get the user profile from the returned object.
                 this.user = this.competency.user;
             }
 
@@ -121,7 +141,7 @@ export class AddonCompetencyCompetencyPage {
     /**
      * Refreshes the competency.
      *
-     * @param {any} refresher Refresher.
+     * @param refresher Refresher.
      */
     refreshCompetency(refresher: any): void {
         let promise;
@@ -141,22 +161,15 @@ export class AddonCompetencyCompetencyPage {
     /**
      * Opens the summary of a competency.
      *
-     * @param {number} competencyId
+     * @param competencyId
      */
     openCompetencySummary(competencyId: number): void {
         // Decide which navCtrl to use. If this page is inside a split view, use the split view's master nav.
         const navCtrl = this.svComponent ? this.svComponent.getMasterNav() : this.navCtrl;
-        navCtrl.push('AddonCompetencyCompetencySummaryPage', {competencyId});
-    }
-
-    /**
-     * Opens the profile of a user.
-     *
-     * @param {number} userId
-     */
-    openUserProfile(userId: number): void {
-        // Decide which navCtrl to use. If this page is inside a split view, use the split view's master nav.
-        const navCtrl = this.svComponent ? this.svComponent.getMasterNav() : this.navCtrl;
-        navCtrl.push('CoreUserProfilePage', {userId, courseId: this.courseId});
+        navCtrl.push('AddonCompetencyCompetencySummaryPage', {
+            competencyId,
+            contextLevel: this.contextLevel,
+            contextInstanceId: this.contextInstanceId
+        });
     }
 }

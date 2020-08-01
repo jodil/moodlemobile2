@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Component, Input, OnInit, OnDestroy, ElementRef } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, ElementRef, SimpleChange } from '@angular/core';
 import { Config } from 'ionic-angular';
 
 /**
@@ -25,7 +25,7 @@ import { Config } from 'ionic-angular';
     selector: 'core-icon',
     templateUrl: 'core-icon.html',
 })
-export class CoreIconComponent implements OnInit, OnDestroy {
+export class CoreIconComponent implements OnChanges, OnDestroy {
     // Common params.
     @Input() name: string;
     @Input('color') color?: string;
@@ -40,6 +40,7 @@ export class CoreIconComponent implements OnInit, OnDestroy {
     @Input('fixed-width') fixedWidth: string;
 
     @Input('label') ariaLabel?: string;
+    @Input() flipRtl?: boolean; // Whether to flip the icon in RTL. Defaults to false.
 
     protected element: HTMLElement;
     protected newElement: HTMLElement;
@@ -49,9 +50,15 @@ export class CoreIconComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Component being initialized.
+     * Detect changes on input properties.
      */
-    ngOnInit(): void {
+    ngOnChanges(changes: {[name: string]: SimpleChange}): void {
+        if (!changes.name || !this.name) {
+            return;
+        }
+
+        const oldElement = this.newElement ? this.newElement : this.element;
+
         // Use a new created element to avoid ion-icon working.
         // This is necessary to make the FontAwesome stuff work.
         // It is also required to stop Ionic overriding the aria-label attribute.
@@ -76,6 +83,7 @@ export class CoreIconComponent implements OnInit, OnDestroy {
         !this.ariaLabel && this.newElement.setAttribute('aria-hidden', 'true');
         !this.ariaLabel && this.newElement.setAttribute('role', 'presentation');
         this.ariaLabel && this.newElement.setAttribute('aria-label', this.ariaLabel);
+        this.ariaLabel && this.newElement.setAttribute('title', this.ariaLabel);
 
         const attrs = this.element.attributes;
         for (let i = attrs.length - 1; i >= 0; i--) {
@@ -99,14 +107,18 @@ export class CoreIconComponent implements OnInit, OnDestroy {
             this.newElement.classList.add('icon-slash');
         }
 
-        this.element.parentElement.replaceChild(this.newElement, this.element);
+        if (this.flipRtl) {
+            this.newElement.classList.add('core-icon-dir-flip');
+        }
+
+        oldElement.parentElement.replaceChild(this.newElement, oldElement);
     }
 
     /**
      * Check if the value is true or on.
      *
-     * @param  {any}     val value to be checked.
-     * @return {boolean}     If has a value equivalent to true.
+     * @param val value to be checked.
+     * @return If has a value equivalent to true.
      */
     isTrueProperty(val: any): boolean {
         if (typeof val === 'string') {

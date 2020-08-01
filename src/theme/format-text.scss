@@ -1,24 +1,31 @@
 /** Styles to match web platform */
+ion-app.app-root core-format-text {
+  ul {
+    padding-left: 1rem;
+  }
+  ul, ol {
+    -webkit-padding-start: 15px;
+  }
+}
 ion-app.app-root core-format-text,
 ion-app.app-root .item core-format-text,
 ion-app.app-root core-rich-text-editor .core-rte-editor {
   @include core-headings();
 
-  font-size: 1.4rem;
-
   p {
+    font-size: 1.4rem;
     margin-bottom: 1rem;
   }
 
-  // Fix lists styles in core-format-text.
-  ul {
-    padding-left: 1rem;
+  .no-overflow {
+    overflow: auto;
   }
+
+  // Fix lists styles in core-format-text.
   ol {
     list-style-type: decimal;
   }
   ul, ol {
-    -webkit-padding-start: 15px;
     ol {
       list-style-type: lower-latin;
     }
@@ -93,8 +100,6 @@ ion-app.app-root core-rich-text-editor .core-rte-editor {
   .atto_image_button_right {
     vertical-align: middle;
     max-width: 100%;
-    height: auto;
-    width: auto;
     display: inline-block;
     margin: 0 0.5em;
 
@@ -102,8 +107,6 @@ ion-app.app-root core-rich-text-editor .core-rte-editor {
       /* If the image is display: block then linking the image to URLs won't work. */
       /*display: inline-block;*/
       max-width: 100%;
-      height: auto;
-      width: auto;
     }
   }
 
@@ -172,6 +175,50 @@ ion-app.app-root core-rich-text-editor .core-rte-editor {
     }
     .alert-#{$color-name} p {
       color: $color-base;
+    }
+  }
+
+  .label {
+    display: inline-block;
+    padding: .25em .4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+    color: $white;
+    background-color: $gray-darker;
+  }
+
+  .label-important {
+    color: $white;
+    background-color: $red;
+  }
+
+  @each $color-name, $color-base, $color-contrast in get-colors($colors) {
+    .label-#{$color-name} {
+      color: $color-contrast;
+      background-color: $color-base;
+    }
+  }
+}
+
+// Those styles are omitted on RTE.
+ion-app.app-root core-format-text,
+ion-app.app-root .item core-format-text {
+  .atto_image_button_text-top,
+  .atto_image_button_middle,
+  .atto_image_button_text-bottom,
+  .atto_image_button_left,
+  .atto_image_button_right {
+    height: auto;
+    width: auto;
+
+    &.img-responsive {
+      height: auto;
+      width: auto;
     }
   }
 }

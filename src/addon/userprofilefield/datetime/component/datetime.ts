@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,6 +30,8 @@ export class AddonUserProfileFieldDatetimeComponent implements OnInit {
     @Input() edit = false; // True if editing the field. Defaults to false.
     @Input() disabled = false; // True if disabled. Defaults to false.
     @Input() form?: FormGroup; // Form where to add the form control.
+    @Input() contextLevel?: string; // The context level.
+    @Input() contextInstanceId?: number; // The instance ID related to the context.
 
     constructor(private fb: FormBuilder, private timeUtils: CoreTimeUtilsProvider, protected utils: CoreUtilsProvider,
             private translate: TranslateService) { }
@@ -47,9 +49,9 @@ export class AddonUserProfileFieldDatetimeComponent implements OnInit {
             // Check if it's only date or it has time too.
             const hasTime = this.utils.isTrueOrOne(field.param3);
 
-            // Calculate format to use. ion-datetime doesn't support escaping characters ([]), so we remove them.
-            field.format = this.timeUtils.convertPHPToMoment(this.translate.instant('core.' +
-                    (hasTime ? 'strftimedatetimeshort' : 'strftimedatefullshort'))).replace(/[\[\]]/g, '');
+            // Calculate format to use.
+            field.format = this.timeUtils.fixFormatForDatetime(this.timeUtils.convertPHPToMoment(
+                    this.translate.instant('core.' + (hasTime ? 'strftimedatetime' : 'strftimedate'))));
 
             // Check min value.
             if (field.param1) {

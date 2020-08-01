@@ -2,9 +2,12 @@
     "app_id": "com.moodle.moodlemobile",
     "appname": "Moodle Mobile",
     "desktopappname": "Moodle Desktop",
-    "versioncode": 3700,
-    "versionname": "3.7.0-dev",
-    "cache_expiration_time": 300000,
+    "versioncode": 3920,
+    "versionname": "3.9.2",
+    "cache_update_frequency_usually": 420000,
+    "cache_update_frequency_often": 1200000,
+    "cache_update_frequency_sometimes": 3600000,
+    "cache_update_frequency_rarely": 43200000,
     "default_lang": "en",
     "languages": {
         "ar": "عربي",
@@ -34,6 +37,8 @@
         "kn": "ಕನ್ನಡ",
         "ko": "한국어",
         "lt": "Lietuvių",
+        "lv": "Latviešu",
+        "mn": "Монгол",
         "mr": "मराठी",
         "nl": "Nederlands",
         "no": "Norsk - bokmål",
@@ -42,12 +47,14 @@
         "pt-br": "Português - Brasil",
         "ro": "Română",
         "ru": "Русский",
+        "sl": "Slovenščina",
         "sr-cr": "Српски",
         "sr-lt": "Srpski",
         "sv": "Svenska",
         "tg": "Тоҷикӣ",
         "tr": "Türkçe",
         "uk": "Українська",
+        "vi": "Vietnamese",
         "zh-cn": "简体中文",
         "zh-tw": "正體中文"
     },
@@ -55,30 +62,47 @@
     "wsextservice": "local_mobile",
     "demo_sites": {
         "student": {
-            "url": "https:\/\/school.demo.moodle.net",
+            "url": "https:\/\/school.moodledemo.net",
             "username": "student",
             "password": "moodle"
         },
         "teacher": {
-            "url": "https:\/\/school.demo.moodle.net",
+            "url": "https:\/\/school.moodledemo.net",
             "username": "teacher",
             "password": "moodle"
         }
     },
+    "font_sizes": [
+        62.5,
+        75.89,
+        93.75
+    ],
     "customurlscheme": "moodlemobile",
     "siteurl": "",
     "sitename": "",
     "multisitesdisplay": "",
+    "onlyallowlistedsites": false,
     "skipssoconfirmation": false,
     "forcedefaultlanguage": false,
-    "privacypolicy": "https:\/\/moodle.org\/mod\/page\/view.php?id=8148",
+    "privacypolicy": "https:\/\/moodle.net\/moodle-app-privacy\/",
     "notificoncolor": "#f98012",
     "statusbarbg": false,
     "statusbarlighttext": false,
-    "statusbarbgios": false,
-    "statusbarlighttextios": false,
+    "statusbarbgios": "#f98012",
+    "statusbarlighttextios": true,
     "statusbarbgandroid": "#df7310",
     "statusbarlighttextandroid": true,
     "statusbarbgremotetheme": "#000000",
-    "statusbarlighttextremotetheme": true
+    "statusbarlighttextremotetheme": true,
+    "enableanalytics": false,
+    "enableonboarding": true,
+    "forceColorScheme": "",
+    "ioswebviewscheme": "moodleappfs",
+    "appstores": {
+        "android": "com.moodle.moodlemobile",
+        "ios": "id633359593",
+        "windows": "moodle-desktop\/9p9bwvhdc8c8",
+        "mac": "id1255924440",
+        "linux": "https:\/\/download.moodle.org\/desktop\/download.php?platform=linux&arch=64"
+    }
 }

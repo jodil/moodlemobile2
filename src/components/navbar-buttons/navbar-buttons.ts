@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import { CoreContextMenuComponent } from '../context-menu/context-menu';
  *
  * If this component indicates a position (start/end), the buttons will only be added if the header has some buttons in that
  * position. If no start/end is specified, then the buttons will be added to the first <ion-buttons> found in the header.
+ *
+ * If this component has a "prepend" attribute, the buttons will be added before other existing buttons in the header.
  *
  * You can use the [hidden] input to hide all the inner buttons if a certain condition is met.
  *
@@ -92,7 +94,8 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
                 if (buttonsContainer) {
                     this.mergeContextMenus(buttonsContainer);
 
-                    this.movedChildren = this.domUtils.moveChildren(this.element, buttonsContainer);
+                    const prepend = this.element.hasAttribute('prepend');
+                    this.movedChildren = this.domUtils.moveChildren(this.element, buttonsContainer, prepend);
                     this.showHideAllElements();
 
                 } else {
@@ -108,7 +111,7 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
     /**
      * Force or unforce hiding all buttons. If this is true, it will override the "hidden" input.
      *
-     * @param {boolean} value The value to set.
+     * @param value The value to set.
      */
     forceHide(value: boolean): void {
         this.forceHidden = value;
@@ -119,7 +122,7 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
     /**
      * If both button containers have a context menu, merge them into a single one.
      *
-     * @param {HTMLElement} buttonsContainer The container where the buttons will be moved.
+     * @param buttonsContainer The container where the buttons will be moved.
      */
     protected mergeContextMenus(buttonsContainer: HTMLElement): void {
         // Check if both button containers have a context menu.
@@ -152,8 +155,8 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
     /**
      * Search the ion-header where the buttons should be added.
      *
-     * @param {number} [retries] Number of retries so far.
-     * @return {Promise<HTMLElement>} Promise resolved with the header element.
+     * @param retries Number of retries so far.
+     * @return Promise resolved with the header element.
      */
     protected searchHeader(retries: number = 0): Promise<HTMLElement> {
         let parentPage: HTMLElement = this.element;
@@ -193,8 +196,8 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
     /**
      * Search ion-header inside a page. The header should be a direct child.
      *
-     * @param  {HTMLElement} page Page to search in.
-     * @return {HTMLElement} Header element. Undefined if not found.
+     * @param page Page to search in.
+     * @return Header element. Undefined if not found.
      */
     protected searchHeaderInPage(page: HTMLElement): HTMLElement {
         for (let i = 0; i < page.children.length; i++) {
@@ -229,7 +232,7 @@ export class CoreNavBarButtonsComponent implements OnInit, OnDestroy {
     /**
      * Show or hide an element.
      *
-     * @param {Node} element Element to show or hide.
+     * @param element Element to show or hide.
      */
     protected showHideElement(element: Node): void {
         // Check if it's an HTML Element

@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,6 +13,18 @@
 // limitations under the License.
 
 /**
+ * Context levels enumeration.
+ */
+export const enum ContextLevel {
+    SYSTEM = 'system',
+    USER = 'user',
+    COURSECAT = 'coursecat',
+    COURSE = 'course',
+    MODULE = 'module',
+    BLOCK = 'block',
+}
+
+/**
  * Static class to contain all the core constants.
  */
 export class CoreConstants {
@@ -23,6 +35,8 @@ export class CoreConstants {
     static SECONDS_MINUTE = 60;
     static WIFI_DOWNLOAD_THRESHOLD = 104857600; // 100MB.
     static DOWNLOAD_THRESHOLD = 10485760; // 10MB.
+    static MINIMUM_FREE_SPACE = 10485760; // 10MB.
+    static IOS_FREE_SPACE_THRESHOLD = 524288000; // 500MB.
     static DONT_SHOW_ERROR = 'CoreDontShowError';
     static NO_SITE_ID = 'NoSite';
 
@@ -33,9 +47,13 @@ export class CoreConstants {
     static SETTINGS_DEBUG_DISPLAY = 'CoreSettingsDebugDisplay';
     static SETTINGS_REPORT_IN_BACKGROUND = 'CoreSettingsReportInBackground'; // @deprecated since 3.5.0
     static SETTINGS_SEND_ON_ENTER = 'CoreSettingsSendOnEnter';
+    static SETTINGS_FONT_SIZE = 'CoreSettingsFontSize';
+    static SETTINGS_COLOR_SCHEME = 'CoreSettingsColorScheme';
+    static SETTINGS_ANALYTICS_ENABLED = 'CoreSettingsAnalyticsEnabled';
 
     // WS constants.
-    static WS_TIMEOUT = 30000;
+    static WS_TIMEOUT = 30000; // Timeout when not in WiFi.
+    static WS_TIMEOUT_WIFI = 30000; // Timeout when in WiFi.
     static WS_PREFIX = 'local_mobile_';
 
     // Login constants.

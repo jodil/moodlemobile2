@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -68,8 +68,8 @@ export class AddonModFeedbackNonRespondentsPage {
     /**
      * Fetch all the data required for the view.
      *
-     * @param {boolean} [refresh] Empty events array first.
-     * @return {Promise<any>} Promise resolved when done.
+     * @param refresh Empty events array first.
+     * @return Promise resolved when done.
      */
     fetchData(refresh: boolean = false): Promise<any> {
         this.page = 0;
@@ -78,6 +78,7 @@ export class AddonModFeedbackNonRespondentsPage {
 
         return this.groupsProvider.getActivityGroupInfo(this.moduleId).then((groupInfo) => {
             this.groupInfo = groupInfo;
+            this.selectedGroup = this.groupsProvider.validateGroupId(this.selectedGroup, groupInfo);
 
             return this.loadGroupUsers(this.selectedGroup);
         }).catch((message) => {
@@ -95,8 +96,8 @@ export class AddonModFeedbackNonRespondentsPage {
     /**
      * Load Group responses.
      *
-     * @param  {number} [groupId]   If defined it will change group if not, it will load more users for the same group.
-     * @return {Promise<any>}       Resolved with the attempts loaded.
+     * @param groupId If defined it will change group if not, it will load more users for the same group.
+     * @return Resolved with the attempts loaded.
      */
     protected loadGroupUsers(groupId?: number): Promise<any> {
         if (typeof groupId == 'undefined') {
@@ -129,7 +130,7 @@ export class AddonModFeedbackNonRespondentsPage {
     /**
      * Change selected group or load more users.
      *
-     * @param {number} [groupId] Group ID selected. If not defined, it will load more users.
+     * @param groupId Group ID selected. If not defined, it will load more users.
      */
     loadAttempts(groupId?: number): void {
         this.loadGroupUsers(groupId).catch((message) => {
@@ -140,7 +141,7 @@ export class AddonModFeedbackNonRespondentsPage {
     /**
      * Refresh the attempts.
      *
-     * @param {any} refresher Refresher.
+     * @param refresher Refresher.
      */
     refreshFeedback(refresher: any): void {
         if (this.feedbackLoaded) {

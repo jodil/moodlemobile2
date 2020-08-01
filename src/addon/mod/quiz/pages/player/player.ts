@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ViewChildren, QueryList } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectorRef, ViewChildren, QueryList, ElementRef } from '@angular/core';
 import { IonicPage, NavParams, Content, PopoverController, ModalController, Modal, NavController } from 'ionic-angular';
 import { TranslateService } from '@ngx-translate/core';
 import { CoreEventsProvider } from '@providers/events';
@@ -23,6 +23,7 @@ import { CoreDomUtilsProvider } from '@providers/utils/dom';
 import { CoreTimeUtilsProvider } from '@providers/utils/time';
 import { CoreQuestionHelperProvider } from '@core/question/providers/helper';
 import { CoreQuestionComponent } from '@core/question/components/question/question';
+import { MoodleMobileApp } from '../../../../../app/app.component';
 import { AddonModQuizProvider } from '../../providers/quiz';
 import { AddonModQuizSyncProvider } from '../../providers/quiz-sync';
 import { AddonModQuizHelperProvider } from '../../providers/helper';
@@ -40,6 +41,7 @@ import { Subscription } from 'rxjs';
 export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     @ViewChild(Content) content: Content;
     @ViewChildren(CoreQuestionComponent) questionComponents: QueryList<CoreQuestionComponent>;
+    @ViewChild('quizForm') formElement: ElementRef;
 
     quiz: any; // The quiz the attempt belongs to.
     attempt: any; // The attempt being attempted.
@@ -80,7 +82,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
             protected timeUtils: CoreTimeUtilsProvider, protected quizProvider: AddonModQuizProvider,
             protected quizHelper: AddonModQuizHelperProvider, protected quizSync: AddonModQuizSyncProvider,
             protected questionHelper: CoreQuestionHelperProvider, protected cdr: ChangeDetectorRef,
-            modalCtrl: ModalController, protected navCtrl: NavController) {
+            modalCtrl: ModalController, protected navCtrl: NavController,  protected mmApp: MoodleMobileApp) {
 
         this.quizId = navParams.get('quizId');
         this.courseId = navParams.get('courseId');
@@ -133,28 +135,37 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Check if we can leave the page or not.
      *
-     * @return {boolean|Promise<void>} Resolved if we can leave it, rejected if not.
+     * @return Resolved if we can leave it, rejected if not.
      */
-    ionViewCanLeave(): boolean | Promise<void> {
+    async ionViewCanLeave(): Promise<void> {
         if (this.forceLeave) {
-            return true;
+            return;
         }
 
         if (this.questions && this.questions.length && !this.showSummary) {
             // Save answers.
             const modal = this.domUtils.showModalLoading('core.sending', true);
 
-            return this.processAttempt(false, false).catch(() => {
+            try {
+                await this.processAttempt(false, false);
+            } catch (error) {
                 // Save attempt failed. Show confirmation.
                 modal.dismiss();
 
-                return this.domUtils.showConfirm(this.translate.instant('addon.mod_quiz.confirmleavequizonerror'));
-            }).finally(() => {
-                modal.dismiss();
-            });
-        }
+                await this.domUtils.showConfirm(this.translate.instant('addon.mod_quiz.confirmleavequizonerror'));
 
-        return Promise.resolve();
+                this.domUtils.triggerFormCancelledEvent(this.formElement, this.sitesProvider.getCurrentSiteId());
+            } finally {
+                modal.dismiss();
+            }
+        }
+    }
+
+    /**
+     * Runs when the page is about to leave and no longer be the active page.
+     */
+    ionViewWillLeave(): void {
+        this.mmApp.closeModal();
     }
 
     /**
@@ -167,7 +178,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * A behaviour button in a question was clicked (Check, Redo, ...).
      *
-     * @param {any} button Clicked button.
+     * @param button Clicked button.
      */
     behaviourButtonClicked(button: any): void {
         // Confirm that the user really wants to do it.
@@ -208,9 +219,9 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Change the current page. If slot is supplied, try to scroll to that question.
      *
-     * @param {number} page Page to load. -1 means summary.
-     * @param {boolean} [fromModal] Whether the page was selected using the navigation modal.
-     * @param {number} [slot] Slot of the question to scroll to.
+     * @param page Page to load. -1 means summary.
+     * @param fromModal Whether the page was selected using the navigation modal.
+     * @param slot Slot of the question to scroll to.
      */
     changePage(page: number, fromModal?: boolean, slot?: number): void {
         if (page != -1 && (this.attempt.state == AddonModQuizProvider.ATTEMPT_OVERDUE || this.attempt.finishedOffline)) {
@@ -277,7 +288,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Convenience function to get the quiz data.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fetchData(): Promise<any> {
         // Wait for any ongoing sync to finish. We won't sync a quiz while it's being played.
@@ -340,9 +351,9 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Finish an attempt, either by timeup or because the user clicked to finish it.
      *
-     * @param {boolean} [userFinish] Whether the user clicked to finish the attempt.
-     * @param {boolean} [timeUp] Whether the quiz time is up.
-     * @return {Promise<void>} Promise resolved when done.
+     * @param userFinish Whether the user clicked to finish the attempt.
+     * @param timeUp Whether the quiz time is up.
+     * @return Promise resolved when done.
      */
     finishAttempt(userFinish?: boolean, timeUp?: boolean): Promise<void> {
         let promise;
@@ -365,6 +376,8 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
                     synced: !this.offline
                 }, this.sitesProvider.getCurrentSiteId());
 
+                this.eventsProvider.trigger(CoreEventsProvider.ACTIVITY_DATA_SENT, { module: 'quiz' });
+
                 // Leave the player.
                 this.forceLeave = true;
                 this.navCtrl.pop();
@@ -379,7 +392,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Fix sequence checks of current page.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected fixSequenceChecks(): Promise<any> {
         // Get current page data again to get the latest sequencechecks.
@@ -402,7 +415,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Get the input answers.
      *
-     * @return {any} Object with the answers.
+     * @return Object with the answers.
      */
     protected getAnswers(): any {
         return this.questionHelper.getAnswersFromForm(document.forms['addon-mod_quiz-player-form']);
@@ -426,8 +439,8 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Load a page questions.
      *
-     * @param {number} page The page to load.
-     * @return {Promise<void>} Promise resolved when done.
+     * @param page The page to load.
+     * @return Promise resolved when done.
      */
     protected loadPage(page: number): Promise<void> {
         return this.quizProvider.getAttemptData(this.attempt.id, page, this.preflightData, this.offline, true).then((data) => {
@@ -457,7 +470,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
             });
 
             // Mark the page as viewed. We'll ignore errors in this call.
-            this.quizProvider.logViewAttempt(this.attempt.id, page, this.preflightData, this.offline).catch((error) => {
+            this.quizProvider.logViewAttempt(this.attempt.id, page, this.preflightData, this.offline, this.quiz).catch((error) => {
                 // Ignore errors.
             });
 
@@ -469,7 +482,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Load attempt summary.
      *
-     * @return {Promise<void>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected loadSummary(): Promise<void> {
         this.summaryQuestions = [];
@@ -484,7 +497,8 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
             this.attempt.dueDateWarning = this.quizProvider.getAttemptDueDateWarning(this.quiz, this.attempt);
 
             // Log summary as viewed.
-            this.quizProvider.logViewAttemptSummary(this.attempt.id, this.preflightData, this.quizId).catch((error) => {
+            this.quizProvider.logViewAttemptSummary(this.attempt.id, this.preflightData, this.quizId, this.quiz.name)
+                    .catch((error) => {
                 // Ignore errors.
             });
         });
@@ -493,7 +507,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Load data to navigate the questions using the navigation modal.
      *
-     * @return {Promise<void>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     protected loadNavigation(): Promise<void> {
         // We use the attempt summary to build the navigation because it contains all the questions.
@@ -511,7 +525,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Open the navigation modal.
      *
-     * @return {Promise<any>} Promise resolved when done.
+     * @return Promise resolved when done.
      */
     openNavigation(): Promise<any> {
         let promise;
@@ -543,10 +557,10 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Process attempt.
      *
-     * @param {boolean} [userFinish] Whether the user clicked to finish the attempt.
-     * @param {boolean} [timeUp] Whether the quiz time is up.
-     * @return {Promise<any>} Promise resolved when done.
-     * @param {boolean} [retrying] Whether we're retrying the change.
+     * @param userFinish Whether the user clicked to finish the attempt.
+     * @param timeUp Whether the quiz time is up.
+     * @return Promise resolved when done.
+     * @param retrying Whether we're retrying the change.
      */
     protected processAttempt(userFinish?: boolean, timeUp?: boolean, retrying?: boolean): Promise<any> {
         // Get the answers to send.
@@ -576,13 +590,17 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
             // Answers saved, cancel auto save.
             this.autoSave.cancelAutoSave();
             this.autoSave.hideAutoSaveError();
+
+            if (this.formElement) {
+                this.domUtils.triggerFormSubmittedEvent(this.formElement, !this.offline, this.sitesProvider.getCurrentSiteId());
+            }
         });
     }
 
     /**
      * Scroll to a certain question.
      *
-     * @param {number} slot Slot of the question to scroll to.
+     * @param slot Slot of the question to scroll to.
      */
     protected scrollToQuestion(slot: number): void {
         this.domUtils.scrollToElementBySelector(this.content, '#addon-mod_quiz-question-' + slot);
@@ -591,7 +609,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Show connection error.
      *
-     * @param {Event} ev Click event.
+     * @param ev Click event.
      */
     showConnectionError(ev: Event): void {
         this.autoSave.showAutoSaveError(ev);
@@ -624,7 +642,7 @@ export class AddonModQuizPlayerPage implements OnInit, OnDestroy {
     /**
      * Start or continue an attempt.
      *
-     * @return {Promise<any>} [description]
+     * @return [description]
      */
     protected startOrContinueAttempt(): Promise<any> {
         const attempt = this.newAttempt ? undefined : this.lastAttempt;

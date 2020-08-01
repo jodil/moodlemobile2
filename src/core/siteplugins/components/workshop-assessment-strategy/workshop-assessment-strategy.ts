@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ import { Component, OnInit, Input } from '@angular/core';
 import { CoreUtilsProvider } from '@providers/utils/utils';
 import { CoreSitePluginsProvider } from '../../providers/siteplugins';
 import { CoreSitePluginsCompileInitComponent } from '../../classes/compile-init-component';
+import { AddonWorkshopAssessmentStrategyDelegate } from '@addon/mod/workshop/providers/assessment-strategy-delegate';
 
 /**
  * Component that displays a workshop assessment strategy plugin created using a site plugin.
@@ -32,7 +33,8 @@ export class CoreSitePluginsWorkshopAssessmentStrategyComponent extends CoreSite
     @Input() fieldErrors: any;
     @Input() strategy: string;
 
-    constructor(sitePluginsProvider: CoreSitePluginsProvider, utils: CoreUtilsProvider) {
+    constructor(sitePluginsProvider: CoreSitePluginsProvider, utils: CoreUtilsProvider,
+            private workshopAssessmentStrategyDelegate: AddonWorkshopAssessmentStrategyDelegate) {
         super(sitePluginsProvider, utils);
     }
 
@@ -48,6 +50,6 @@ export class CoreSitePluginsWorkshopAssessmentStrategyComponent extends CoreSite
         this.jsData.fieldErrors = this.fieldErrors;
         this.jsData.strategy = this.strategy;
 
-        this.getHandlerData('workshopform_' + this.strategy);
+        this.getHandlerData(this.workshopAssessmentStrategyDelegate.getHandlerName(this.strategy));
     }
 }

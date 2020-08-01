@@ -1,4 +1,4 @@
-// (C) Copyright 2015 Martin Dougiamas
+// (C) Copyright 2015 Moodle Pty Ltd.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import { CoreContentLinksAction } from '@core/contentlinks/providers/delegate';
 import { CoreCourseProvider } from '@core/course/providers/course';
 import { CoreCourseHelperProvider } from '@core/course/providers/helper';
 import { AddonModLessonProvider } from './lesson';
+import { NavController } from 'ionic-angular';
 
 /**
  * Handler to treat links to lesson index.
@@ -35,11 +36,11 @@ export class AddonModLessonIndexLinkHandler extends CoreContentLinksModuleIndexH
     /**
      * Get the list of actions for a link (url).
      *
-     * @param {string[]} siteIds List of sites the URL belongs to.
-     * @param {string} url The URL to treat.
-     * @param {any} params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
-     * @param {number} [courseId] Course ID related to the URL. Optional but recommended.
-     * @return {CoreContentLinksAction[]|Promise<CoreContentLinksAction[]>} List of (or promise resolved with list of) actions.
+     * @param siteIds List of sites the URL belongs to.
+     * @param url The URL to treat.
+     * @param params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
+     * @param courseId Course ID related to the URL. Optional but recommended.
+     * @return List of (or promise resolved with list of) actions.
      */
     getActions(siteIds: string[], url: string, params: any, courseId?: number):
             CoreContentLinksAction[] | Promise<CoreContentLinksAction[]> {
@@ -51,9 +52,10 @@ export class AddonModLessonIndexLinkHandler extends CoreContentLinksModuleIndexH
                 /* Ignore the pageid param. If we open the lesson player with a certain page and the user hasn't started
                    the lesson, an error is thrown: could not find lesson_timer records. */
                 if (params.userpassword) {
-                    this.navigateToModuleWithPassword(parseInt(params.id, 10), courseId, params.userpassword, siteId);
+                    this.navigateToModuleWithPassword(parseInt(params.id, 10), courseId, params.userpassword, siteId, navCtrl);
                 } else {
-                    this.courseHelper.navigateToModule(parseInt(params.id, 10), siteId, courseId);
+                    this.courseHelper.navigateToModule(parseInt(params.id, 10), siteId, courseId,
+                        undefined, undefined, undefined, navCtrl);
                 }
             }
         }];
@@ -63,11 +65,11 @@ export class AddonModLessonIndexLinkHandler extends CoreContentLinksModuleIndexH
      * Check if the handler is enabled for a certain site (site + user) and a URL.
      * If not defined, defaults to true.
      *
-     * @param {string} siteId The site ID.
-     * @param {string} url The URL to treat.
-     * @param {any} params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
-     * @param {number} [courseId] Course ID related to the URL. Optional but recommended.
-     * @return {boolean|Promise<boolean>} Whether the handler is enabled for the URL and site.
+     * @param siteId The site ID.
+     * @param url The URL to treat.
+     * @param params The params of the URL. E.g. 'mysite.com?id=1' -> {id: 1}
+     * @param courseId Course ID related to the URL. Optional but recommended.
+     * @return Whether the handler is enabled for the URL and site.
      */
     isEnabled(siteId: string, url: string, params: any, courseId?: number): boolean | Promise<boolean> {
         return this.lessonProvider.isPluginEnabled();
@@ -76,13 +78,15 @@ export class AddonModLessonIndexLinkHandler extends CoreContentLinksModuleIndexH
     /**
      * Navigate to a lesson module (index page) with a fixed password.
      *
-     * @param {number} moduleId Module ID.
-     * @param {number} courseId Course ID.
-     * @param {string} password Password.
-     * @param {string} siteId Site ID.
-     * @return {Promise<any>} Promise resolved when navigated.
+     * @param moduleId Module ID.
+     * @param courseId Course ID.
+     * @param password Password.
+     * @param siteId Site ID.
+     * @param navCtrl Navigation controller.
+     * @return Promise resolved when navigated.
      */
-    protected navigateToModuleWithPassword(moduleId: number, courseId: number, password: string, siteId: string): Promise<any> {
+    protected navigateToModuleWithPassword(moduleId: number, courseId: number, password: string, siteId: string,
+                                           navCtrl?: NavController): Promise<any> {
         const modal = this.domUtils.showModalLoading();
 
         // Get the module.
@@ -93,11 +97,12 @@ export class AddonModLessonIndexLinkHandler extends CoreContentLinksModuleIndexH
             return this.lessonProvider.storePassword(parseInt(module.instance, 10), password, siteId).catch(() => {
                 // Ignore errors.
             }).then(() => {
-                return this.courseHelper.navigateToModule(moduleId, siteId, courseId, module.section);
+                return this.courseHelper.navigateToModule(moduleId, siteId, courseId, module.section,
+                    undefined, undefined, navCtrl);
             });
         }).catch(() => {
             // Error, go to index page.
-            return this.courseHelper.navigateToModule(moduleId, siteId, courseId);
+            return this.courseHelper.navigateToModule(moduleId, siteId, courseId, undefined, undefined, undefined, navCtrl);
         }).finally(() => {
             modal.dismiss();
         });

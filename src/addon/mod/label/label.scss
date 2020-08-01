@@ -1,19 +1,16 @@
-a.core-course-module-handler.addon-mod-label-handler {
+ion-app.app-root .item.core-course-module-handler.addon-mod-label-handler {
     align-items: center;
+    cursor: auto;
 
     &:hover {
         opacity: 1;
     }
 }
 
-.md a.core-course-module-handler.addon-mod-label-handler .item-inner {
+.md .item.core-course-module-handler.addon-mod-label-handler .item-inner {
     padding-bottom: $item-md-padding-bottom;
 }
 
-.ios a.core-course-module-handler.addon-mod-label-handler .item-inner {
+.ios .item.core-course-module-handler.addon-mod-label-handler .item-inner {
     padding-bottom: $item-ios-padding-bottom;
-}
-
-.wp a.core-course-module-handler.addon-mod-label-handler .item-inner {
-    padding-bottom: $item-wp-padding-bottom;
 }
